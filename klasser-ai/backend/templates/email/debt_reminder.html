@@ -1,0 +1,31 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Your balance is still outstanding</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, {{ school_name }} has an amount owing from {{ what }},
+  and it is accruing interest each day it stays unpaid.
+</p>
+
+{{ m.panel([
+  ("Days outstanding", days_outstanding),
+  ("Interest added today", "$" ~ interest_today_dollars),
+  ("Total owing", "$" ~ total_owed_dollars),
+  ("Daily rate", interest_rate_daily_pct ~ "%")
+]) }}
+
+<p style="margin:0 0 14px">
+  Settling this stops the interest and unblocks generating. Timetables you have
+  already produced are unaffected either way.
+</p>
+
+{{ m.button(resolve_url, "Settle the balance") }}
+
+<p style="margin:0;color:#6B6B8A;font-size:13px">
+  If you believe this is wrong, reply to this email and we will look into it
+  before any more interest is added.
+</p>
+
+{% endblock %}

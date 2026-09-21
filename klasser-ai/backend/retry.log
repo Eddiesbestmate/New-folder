@@ -1,0 +1,34 @@
+﻿
+Retry loop
+
+  PASS  routes 'Teacher double-booked: 11MAT1 and ' - got layer5_teachers, expected layer5_teachers        
+  PASS  routes 'Room double-booked: A and B' - got layer4_rooms, expected layer4_rooms                     
+  PASS  routes 'A student has 2 classes in the sam' - got layer3_period_slots, expected layer3_period_slots
+  PASS  routes '11ENG1 has 40 students in R1, whic' - got layer4_rooms, expected layer4_rooms              
+  PASS  routes '11ENG1 has 40 students, over the h' - got layer2_class_groups, expected layer2_class_groups
+  PASS  routes 'something unrecognised' - got layer2_class_groups, expected layer2_class_groups            
+  PASS  routes 'anything at all' - got layer3_period_slots, expected layer3_period_slots                   
+  PASS  recovered on the second attempt - 2                                                                
+  PASS  second attempt produced a timetable - 54                                                           
+  PASS  one attempt row per try - 2                                                                        
+  PASS  first attempt recorded as failed                                                                   
+  PASS  second recorded as complete                                                                        
+  PASS  failure reason kept on the failed attempt                                                          
+  PASS  a retry event was emitted - 1                                                                      
+  PASS  retry event names the layer it restarted from - layer5_teachers                                    
+  PASS  only the successful attempt left a version - 1                                                     
+  PASS  retry did not re-run class group formation                                                         
+  PASS  retry did not re-run period assignment                                                             
+  PASS  retry did re-run teacher assignment                                                                
+  PASS  retry re-validated                                                                                 
+  PASS  class groups were copied into the retry - 21                                                       
+  PASS  period slots were copied into the retry - 54                                                       
+  PASS  copied slots point at the retry's own class groups - 0                                             
+  PASS  a different seed makes different choices - 30/54 assignments identical                             
+  PASS  stops at allocation_max_loops - Generation failed after 2 attempts. Last problem: Day 1: Tea       
+  PASS  exactly max_loops attempts made - 2                                                                
+  PASS  timetable marked failed - failed                                                                   
+  PASS  no draft left behind by failed attempts - 0                                                        
+  PASS  test data cleaned up - 0 left                                                                      
+
+All 29 checks passed.

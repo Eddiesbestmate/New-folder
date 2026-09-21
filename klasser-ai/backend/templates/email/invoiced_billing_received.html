@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">We have your application</h1>
+
+<p style="margin:0 0 14px">
+  Thanks {{ first_name }} - we received {{ school_name }}'s application for invoiced billing on {{ application_date }}.
+</p>
+
+<p style="margin:0 0 14px">
+  Someone will look at it within {{ expected_response_days }} business days and email you either way. Nothing needs doing in the meantime.
+</p>
+
+{{ m.signoff() }}
+{% endblock %}

@@ -1,0 +1,12 @@
+﻿.\venv\Scripts\python.exe : 11:40:59  WARNING klasser.db  DATABASE_SSL=disable - connecting to Postgres WITHOUT TLS. 
+The password and all data cross the network in cleartext. Local development only; never deploy with this set.
+At line:5 char:124
++ ... -NoNewline; .\venv\Scripts\python.exe test_billing.py > bill.log 2> b ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (11:40:59  WARNI... with this set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+11:40:59  INFO    klasser.db  Database connected: PostgreSQL 17.6 on x86_64-pc-linux-gnu
+11:41:02  INFO    klasser.auth  School created: Billing a b5430301 (owner billing.a.b5430301@example.com)
+11:41:12  INFO    klasser.auth  School created: Billing b b5430301 (owner billing.b.b5430301@example.com)
+11:41:21  INFO    klasser.db  Database pool closed

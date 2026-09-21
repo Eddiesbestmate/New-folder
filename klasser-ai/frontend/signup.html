@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create your school account - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-card wide">
+    <div class="auth-head">
+      <a href="index.html" style="text-decoration:none">
+        <span class="logo" style="color:var(--ink)">Klass<span class="er">er</span></span>
+      </a>
+      <h1 style="font-size:22px;margin-top:14px">Create your school account</h1>
+      <p class="muted small" style="margin:0">
+        This creates the school and makes you its owner.
+      </p>
+    </div>
+
+    <div id="alert" hidden></div>
+
+    <form id="form" novalidate>
+      <span class="eyebrow">School</span>
+      <div class="field" style="margin-top:10px">
+        <label for="school_name">School name</label>
+        <input id="school_name" required maxlength="200" placeholder="Westfield College">
+      </div>
+
+      <div class="field">
+        <label for="timezone">Timezone</label>
+        <select id="timezone" required>
+          <option value="">Loading...</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="campuses">Campus names</label>
+        <input id="campuses" placeholder="North Campus, South Campus">
+        <div class="hint">Comma separated. Leave blank if you have one unnamed
+          campus - you can add campuses later.</div>
+      </div>
+
+      <div class="divider">YOUR ACCOUNT</div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="first_name">First name</label>
+          <input id="first_name" required maxlength="100" autocomplete="given-name">
+        </div>
+        <div class="field">
+          <label for="surname">Surname</label>
+          <input id="surname" required maxlength="100" autocomplete="family-name">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" required autocomplete="email"
+               placeholder="you@school.edu.au">
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" required autocomplete="new-password">
+        <div class="hint">At least 8 characters, including a letter and a number.</div>
+      </div>
+
+      <button id="submit" class="btn btn-primary btn-block" type="submit">
+        Create account
+      </button>
+    </form>
+
+    <p class="center small muted" style="margin:18px 0 0">
+      Already have an account? <a href="login.html">Log in</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const alertBox = document.getElementById('alert');
+  const form = document.getElementById('form');
+  const submit = document.getElementById('submit');
+  const tzSelect = document.getElementById('timezone');
+
+  redirectIfSignedIn();
+
+  /* Timezone options come from the backend so the list stays in one place. */
+  (async () => {
+    try {
+      const zones = await apiCall('GET', '/auth/timezones');
+      tzSelect.innerHTML = zones
+        .map((z) => `<option value="${z.value}">${z.label} (${z.value})</option>`)
+        .join('');
+    } catch (err) {
+      tzSelect.innerHTML = '<option value="Australia/Sydney">NSW, VIC, TAS, ACT (Australia/Sydney)</option>';
+      showAlert(alertBox, 'Could not load timezones - defaulting to Sydney. ' + err.message, 'warning');
+    }
+  })();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert(alertBox);
+
+    const campuses = document.getElementById('campuses').value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, address: null }));
+
+    const payload = {
+      school_name: document.getElementById('school_name').value.trim(),
+      timezone: tzSelect.value,
+      first_name: document.getElementById('first_name').value.trim(),
+      surname: document.getElementById('surname').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+      campuses,
+    };
+
+    if (!payload.school_name || !payload.first_name || !payload.surname
+        || !payload.email || !payload.password) {
+      showAlert(alertBox, 'Fill in every field.');
+      return;
+    }
+    if (payload.password.length < 8) {
+      showAlert(alertBox, 'Password must be at least 8 characters.');
+      return;
+    }
+
+    submit.disabled = true;
+    submit.textContent = 'Creating account...';
+    try {
+      await signupSchool(payload);
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      showAlert(alertBox, err.message);
+      submit.disabled = false;
+      submit.textContent = 'Create account';
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Billing - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .balance { display: grid; grid-template-columns: 1fr auto; gap: 16px;
+               align-items: center; }
+    .balance .figure { font-size: 40px; font-weight: 700; line-height: 1; }
+    .meter { height: 8px; border-radius: 999px; background: var(--surface-1);
+             overflow: hidden; margin-top: 10px; }
+    .meter > span { display: block; height: 100%; background: var(--accent); }
+    .pack { border: 1px solid var(--border); border-radius: var(--radius-md);
+            padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .pack.best { border-color: var(--accent); }
+    .pack .price { font-size: 24px; font-weight: 700; }
+    .pack .rate { font-size: 12px; color: var(--slate); }
+    .pack button { margin-top: auto; }
+    .card-face { font-family: ui-monospace, Menlo, Consolas, monospace;
+                 letter-spacing: 2px; font-size: 17px; }
+    .txn-amount.pos { color: var(--text-success, #1a7f4b); }
+    .txn-amount.neg { color: var(--slate); }
+    .mode-option { display: flex; gap: 10px; align-items: flex-start;
+                   padding: 12px; border: 1px solid var(--border);
+                   border-radius: var(--radius-md); margin-bottom: 8px;
+                   cursor: pointer; }
+    .mode-option.selected { border-color: var(--accent);
+                            background: var(--surface-2); }
+    .mode-option input { width: auto; margin-top: 3px; }
+    .processing { display: flex; align-items: center; gap: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1050px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Billing</span>
+    <h1>Credits and payments</h1>
+    <p class="muted">
+      Generations are charged in credits. What a run costs depends on the size
+      and complexity of your school.
+    </p>
+
+    <!-- Blocked / debt banner ------------------------------------------- -->
+    <div id="blocked-banner" hidden class="alert alert-danger"></div>
+
+    <!-- Balance ---------------------------------------------------------- -->
+    <div class="card" style="margin-bottom:18px">
+      <div class="balance">
+        <div>
+          <div class="small muted">Available credits</div>
+          <div class="figure" id="available">-</div>
+          <div class="small muted" id="balance-detail"></div>
+          <div class="meter"><span id="meter-fill" style="width:0"></span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="small muted">Next generation</div>
+          <div style="font-size:22px;font-weight:700" id="run-cost">-</div>
+          <div class="small muted" id="runs-left"></div>
+        </div>
+      </div>
+      <div id="low-balance" hidden class="alert alert-warning small"
+           style="margin-top:14px"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="buy">Buy credits</button>
+      <button class="tab" data-tab="method">Payment method</button>
+      <button class="tab" data-tab="history">History</button>
+      <button class="tab" data-tab="invoices">Invoices</button>
+    </div>
+
+    <!-- Buy -------------------------------------------------------------- -->
+    <div class="card" id="panel-buy" style="margin-top:16px">
+      <p class="small muted" id="simulated-note">
+        This is a simulated terminal for the project build. No real payment is
+        ever processed and no real card details are stored.
+      </p>
+      <div class="feature-grid" id="packages"></div>
+    </div>
+
+    <!-- Payment method ---------------------------------------------------- -->
+    <div class="card" id="panel-method" hidden style="margin-top:16px">
+      <h2 style="margin-top:0">How you pay</h2>
+      <div id="modes"></div>
+
+      <h2>Card on file</h2>
+      <div id="card-state"></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-primary" id="add-card" type="button">
+          Add or replace card
+        </button>
+        <button class="btn" id="remove-card" type="button" hidden>
+          Remove card
+        </button>
+      </div>
+    </div>
+
+    <!-- History ----------------------------------------------------------- -->
+    <div class="card" id="panel-history" hidden style="margin-top:16px">
+      <h2 style="margin-top:0">Transactions</h2>
+      <div id="transactions"></div>
+    </div>
+
+    <!-- Invoices ---------------------------------------------------------- -->
+    <div class="card" id="panel-invoices" hidden style="margin-top:16px">
+      <h2 style="margin-top:0">Invoices</h2>
+      <p class="small muted" id="invoices-note"></p>
+      <div id="invoices"></div>
+
+      <div id="outstanding-block" hidden>
+        <h2>Outstanding</h2>
+        <div id="outstanding"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Card terminal ------------------------------------------------------- -->
+<dialog id="card-dialog">
+  <form id="card-form" method="dialog">
+    <h2 style="margin-top:0">Add a card</h2>
+    <p class="small muted">
+      Simulated terminal. Type anything - the same input always produces the
+      same card, and nothing is sent to a payment provider.
+    </p>
+    <div id="card-alert" hidden></div>
+
+    <div class="field">
+      <label for="card-number">Card number</label>
+      <input id="card-number" class="card-face" autocomplete="off"
+             placeholder="4111 1111 1111 1111" maxlength="24">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field">
+        <label for="card-expiry">Expiry</label>
+        <input id="card-expiry" class="card-face" placeholder="MM/YY"
+               maxlength="5" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="card-cvv">CVV</label>
+        <input id="card-cvv" class="card-face" placeholder="123"
+               maxlength="4" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label for="card-name">Name on card</label>
+      <input id="card-name" autocomplete="off" placeholder="A. Principal">
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:18px;align-items:center">
+      <button class="btn btn-primary" id="card-submit" type="submit">
+        Add card
+      </button>
+      <button class="btn" id="card-cancel" type="button">Cancel</button>
+      <span class="processing small muted" id="card-processing" hidden>
+        Processing...
+      </span>
+    </div>
+  </form>
+</dialog>
+
+<!-- Purchase confirmation ----------------------------------------------- -->
+<dialog id="buy-dialog">
+  <form id="buy-form" method="dialog">
+    <h2 style="margin-top:0" id="buy-title">Confirm purchase</h2>
+    <div id="buy-alert" hidden></div>
+    <p id="buy-detail" class="small"></p>
+    <p class="small muted">
+      Simulated payment. Your card on file is charged in the demo only.
+    </p>
+    <div style="display:flex;gap:10px;margin-top:18px;align-items:center">
+      <button class="btn btn-primary" type="submit" id="buy-submit">
+        Buy credits
+      </button>
+      <button class="btn" id="buy-cancel" type="button">Cancel</button>
+      <span class="processing small muted" id="buy-processing" hidden>
+        Processing...
+      </span>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/billing.js"></script>
+
+</body>
+</html>

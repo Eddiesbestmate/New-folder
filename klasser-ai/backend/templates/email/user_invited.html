@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Invitation sent</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ owner_first_name }}, you invited <strong>{{ invitee_email }}</strong> to join {{ school_name }} as {{ role }}.
+</p>
+
+<p style="margin:0 0 14px">
+  Their link works for {{ invite_expires_days }} days. If they do not get it, you can resend or copy the link from your users page.
+</p>
+
+{{ m.signoff() }}
+{% endblock %}

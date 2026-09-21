@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timetables - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1000px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:16px">
+      <div>
+        <span class="eyebrow">Timetables</span>
+        <h1 style="margin-bottom:4px">Your timetables</h1>
+      </div>
+      <a class="btn btn-primary" href="generate.html">Generate a timetable</a>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div style="overflow-x:auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Status</th><th>Attempts</th>
+              <th>Versions</th><th>Created</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="muted small" id="empty" hidden style="margin:14px 0 0">
+        No timetables yet. Generate one to get started.
+      </p>
+    </div>
+
+    <div class="card" id="versions-card" hidden style="margin-top:16px">
+      <h3 id="versions-title">Versions</h3>
+      <p class="small muted" style="margin:2px 0 0">
+        One version is live at a time. Publishing an older version rolls back to
+        it; the one it replaces is archived, not deleted.
+      </p>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:1%"></th>
+              <th>Version</th><th>Status</th><th>Entries</th>
+              <th>Published by</th><th>Notes</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="version-rows"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+        <button class="btn" id="compare" type="button" disabled>
+          Compare selected
+        </button>
+        <span class="small muted" id="compare-hint">Tick two versions to compare them.</span>
+      </div>
+    </div>
+
+    <div class="card" id="diff-card" hidden style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="diff-title" style="margin:0">Comparison</h3>
+        <button class="btn small" id="diff-close" type="button">Close</button>
+      </div>
+      <div id="diff-summary" class="small muted" style="margin-top:6px"></div>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table class="table">
+          <thead>
+            <tr><th>Change</th><th>Class</th><th>Day</th><th>Before</th><th>After</th></tr>
+          </thead>
+          <tbody id="diff-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const alertBox = document.getElementById('alert');
+  const params = new URLSearchParams(window.location.search);
+  let tz = 'Australia/Sydney';
+
+  document.getElementById('logout').addEventListener('click', logout);
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function statusChip(status, reason) {
+    const kind = { complete: 'success', failed: 'danger', processing: 'warning' }[status]
+      || 'accent';
+    const title = reason ? ` title="${escapeHtml(reason)}"` : '';
+    return `<span class="small"${title} style="padding:2px 8px;border-radius:999px;`
+      + `background:var(--bg-${kind});color:var(--text-${kind})">${status}</span>`;
+  }
+
+  let isOwner = false;
+
+  async function showVersions(timetableId, name) {
+    const versions = await apiCall('GET', `/timetables/${timetableId}/versions`);
+    document.getElementById('versions-title').textContent = `Versions - ${name}`;
+    document.getElementById('versions-card').hidden = false;
+    document.getElementById('diff-card').hidden = true;
+
+    document.getElementById('version-rows').innerHTML = versions.map((v) => {
+      const actions = [
+        `<a class="btn small" href="output.html?version=${v.id}">Open</a>`,
+      ];
+      if (isOwner && v.status === 'draft') {
+        actions.push(`<a class="btn small" href="edit.html?version=${v.id}">Edit</a>`);
+        actions.push(`<button class="btn small" data-publish="${v.id}">Publish</button>`);
+        actions.push(`<button class="btn small" data-discard="${v.id}"
+                       style="color:var(--text-danger)">Discard</button>`);
+      }
+      // Publishing an archived version is the rollback path.
+      if (isOwner && v.status === 'archived') {
+        actions.push(`<button class="btn small" data-publish="${v.id}">Roll back to this</button>`);
+      }
+      return `
+        <tr>
+          <td><input type="checkbox" class="pick" value="${v.id}"
+                     data-label="v${v.version_number}" style="width:auto"></td>
+          <td>v${v.version_number}</td>
+          <td>${statusChip(v.status)}</td>
+          <td>${v.entries}</td>
+          <td>${escapeHtml(v.published_by || '')}</td>
+          <td>${escapeHtml(v.notes || '')}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap">${actions.join('')}</td>
+        </tr>`;
+    }).join('');
+
+    document.querySelectorAll('[data-publish]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          const result = await apiCall(
+            'POST', `/timetables/version/${btn.dataset.publish}/publish`);
+          showAlert(alertBox, result.unchanged
+            ? 'That version is already live.'
+            : `v${result.version_number} is now live.`, 'success');
+          await showVersions(timetableId, name);
+        } catch (err) {
+          showAlert(alertBox, err.message);
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-discard]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Discard this draft? Its entries are deleted.')) return;
+        try {
+          await apiCall('DELETE', `/timetables/version/${btn.dataset.discard}`);
+          showAlert(alertBox, 'Draft discarded.', 'success');
+          await showVersions(timetableId, name);
+        } catch (err) {
+          showAlert(alertBox, err.message);
+        }
+      });
+    });
+
+    document.querySelectorAll('.pick').forEach((box) => {
+      box.addEventListener('change', updateCompare);
+    });
+    updateCompare();
+
+    document.getElementById('versions-card')
+      .scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function picked() {
+    return [...document.querySelectorAll('.pick:checked')];
+  }
+
+  function updateCompare() {
+    const chosen = picked();
+    document.getElementById('compare').disabled = chosen.length !== 2;
+    document.getElementById('compare-hint').textContent = chosen.length === 2
+      ? `Comparing ${chosen[0].dataset.label} with ${chosen[1].dataset.label}`
+      : 'Tick two versions to compare them.';
+  }
+
+  const DIFF_LABELS = {
+    added: 'Added', removed: 'Removed', moved: 'Moved',
+    teacher_changed: 'Teacher', room_changed: 'Room',
+  };
+
+  function slot(s) {
+    if (!s) return '<span class="muted">-</span>';
+    return `Day ${s.day} ${escapeHtml(s.period)}<br>`
+      + `<span class="muted small">${escapeHtml(s.teacher)} &middot; ${escapeHtml(s.room)}</span>`;
+  }
+
+  document.getElementById('compare').addEventListener('click', async () => {
+    const [a, b] = picked();
+    try {
+      const diff = await apiCall(
+        'GET', `/timetables/version/${a.value}/compare/${b.value}`);
+      document.getElementById('diff-card').hidden = false;
+      document.getElementById('diff-title').textContent =
+        `v${diff.a.version_number} compared with v${diff.b.version_number}`;
+
+      const parts = Object.entries(diff.counts)
+        .map(([k, n]) => `${n} ${DIFF_LABELS[k] || k}`);
+      document.getElementById('diff-summary').textContent = diff.identical
+        ? 'These versions are identical.'
+        : `${diff.entries.a} entries vs ${diff.entries.b}. ${parts.join(', ')}.`;
+
+      document.getElementById('diff-rows').innerHTML = diff.changes.map((c) => `
+        <tr>
+          <td>${DIFF_LABELS[c.type] || c.type}</td>
+          <td>${escapeHtml(c.class_code)}</td>
+          <td>${c.day}</td>
+          <td>${slot(c.before)}</td>
+          <td>${slot(c.after)}</td>
+        </tr>`).join('')
+        || '<tr><td colspan="5" class="muted small">No differences.</td></tr>';
+
+      document.getElementById('diff-card').scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      showAlert(alertBox, err.message);
+    }
+  });
+
+  document.getElementById('diff-close').addEventListener('click', () => {
+    document.getElementById('diff-card').hidden = true;
+  });
+
+  (async () => {
+    const me = await requireLogin();
+    if (!me) return;
+    tz = me.timezone;
+    isOwner = me.role === 'owner';
+
+    document.getElementById('who').textContent =
+      `${me.first_name} ${me.surname} - ${me.role}`;
+
+    const list = await apiCall('GET', '/timetables');
+    document.getElementById('empty').hidden = list.length > 0;
+
+    document.getElementById('rows').innerHTML = list.map((t) => {
+      const open = t.status === 'processing'
+        ? `<a class="btn small" href="progress.html?timetable=${t.id}">Watch</a>`
+        : (t.latest_version
+            ? `<a class="btn small" href="output.html?version=${t.latest_version}">Open</a>`
+            : '');
+      return `
+        <tr>
+          <td><a href="#" data-versions="${t.id}" data-name="${escapeHtml(t.name)}">${escapeHtml(t.name)}</a></td>
+          <td>${statusChip(t.status, t.failure_reason)}</td>
+          <td>${t.attempts}</td>
+          <td>${t.versions}</td>
+          <td class="muted">${formatLocalTime(t.created_at, tz)}</td>
+          <td>${open}</td>
+        </tr>`;
+    }).join('');
+
+    document.querySelectorAll('[data-versions]').forEach((link) => {
+      link.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          await showVersions(link.dataset.versions, link.dataset.name);
+        } catch (err) {
+          showAlert(alertBox, err.message);
+        }
+      });
+    });
+
+    if (params.get('timetable')) {
+      const match = list.find((t) => t.id === params.get('timetable'));
+      if (match) await showVersions(match.id, match.name);
+    }
+
+    document.getElementById('loading').hidden = true;
+    document.getElementById('content').hidden = false;
+  })().catch((err) => {
+    document.getElementById('loading').hidden = true;
+    showAlert(alertBox, err.message);
+  });
+</script>
+
+</body>
+</html>

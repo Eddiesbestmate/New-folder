@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generating - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .bar { height: 8px; background: var(--surface-1); border-radius: 999px;
+           overflow: hidden; }
+    .bar > div { height: 100%; background: var(--purple);
+                 transition: width .4s ease; }
+    .stage-list { list-style: none; padding: 0; margin: 16px 0 0; }
+    .stage-list li { display: flex; align-items: center; gap: 10px;
+                     padding: 7px 0; font-size: 13px;
+                     border-bottom: 1px solid var(--border); }
+    .stage-list li:last-child { border-bottom: none; }
+    .dot { width: 16px; text-align: center; font-weight: 700; }
+    .dot.done    { color: var(--text-success); }
+    .dot.active  { color: var(--amber-dark); }
+    .dot.waiting { color: var(--slate-light); }
+    .dot.failed  { color: var(--text-danger); }
+    .log { max-height: 280px; overflow-y: auto; font-size: 12px;
+           border: 1px solid var(--border); border-radius: var(--radius-md);
+           padding: 10px; background: var(--surface-2); }
+    .log div { padding: 3px 0; border-bottom: 1px solid var(--surface-1); }
+    .log div:last-child { border-bottom: none; }
+    .log .retry { color: var(--text-warning); font-weight: 600; }
+    .log .failed { color: var(--text-danger); font-weight: 600; }
+    .log .complete { color: var(--text-success); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Generating</span>
+    <h1 id="title"></h1>
+    <p class="muted" id="subtitle"></p>
+
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <strong id="stage-label">Starting...</strong>
+        <span class="muted small" id="pct">0%</span>
+      </div>
+      <div class="bar" style="margin-top:10px"><div id="bar-fill" style="width:0"></div></div>
+      <div class="muted small" id="chunk" style="margin-top:8px"></div>
+      <ul class="stage-list" id="stages"></ul>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h3>Activity</h3>
+      <div class="log" id="log" style="margin-top:10px">
+        <div id="log-empty" class="muted">
+          Waiting for the first stage to report. A generation takes a few
+          minutes - you can close this page and we will email you when it is
+          done.
+        </div>
+      </div>
+    </div>
+
+    <div id="result" hidden></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <a class="btn" href="dashboard.html">Back to dashboard</a>
+      <a class="btn btn-primary" id="view-output" href="#" hidden>View the timetable</a>
+      <a class="btn" id="retry" href="generate.html" hidden>Try again</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/progress.js"></script>
+
+</body>
+</html>

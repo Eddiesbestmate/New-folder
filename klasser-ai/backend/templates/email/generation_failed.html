@@ -1,0 +1,36 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Timetable generation did not finish</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, <strong>{{ timetable_name }}</strong> could not be completed for {{ school_name }}.
+</p>
+
+{{ m.alert(failure_reason, "danger") }}
+
+{% if is_school_fault %}<p style="margin:0 0 14px">
+  This one is about the school data rather than a fault on our side. The message above says what stopped it - fixing that and generating again should work.
+</p>
+
+{% else %}<p style="margin:0 0 14px">
+  This was a fault on our side, not anything you did. It has been logged and we can see it.
+</p>
+
+{% endif %}
+
+{{ m.panel([("Charged", credits_charged ~ " credits"), ("Refunded", credits_refunded ~ " credits")]) }}
+
+<p style="margin:0 0 14px">
+  You are not charged for a generation that produced no timetable, whoever's fault it was.
+</p>
+
+{{ m.button(retry_url, "Try again") }}
+
+<p style="margin:0">
+  Still stuck? <a href="{{ support_url }}" style="color:#6366F1">Raise a support ticket</a> and we will look at this specific run.
+</p>
+
+
+{% endblock %}

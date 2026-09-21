@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timetable - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .grid { border-collapse: collapse; width: 100%; font-size: 12px; }
+    .grid th, .grid td { border: 1px solid var(--border); padding: 6px 8px;
+                         vertical-align: top; }
+    .grid th { background: var(--surface-1); font-size: 11px; font-weight: 600;
+               color: var(--slate); white-space: nowrap; }
+    .grid td { height: 54px; }
+    .cell { border-radius: var(--radius-sm); padding: 5px 6px; height: 100%; }
+    .cell strong { display: block; font-size: 12px; }
+    .cell span  { display: block; font-size: 10px; opacity: .85; }
+    .subj-default { background: var(--purple-light); color: var(--purple-dark); }
+    .subj-science { background: var(--bg-warning);  color: var(--text-warning); }
+    .subj-maths   { background: var(--bg-success);  color: var(--text-success); }
+    .subj-english { background: var(--bg-accent);   color: var(--text-accent); }
+    .subj-other   { background: var(--surface-1);   color: var(--slate); }
+    .empty { color: var(--slate-light); font-size: 11px; }
+    .picker { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .watermark { background: var(--bg-warning); color: var(--text-warning);
+                 border: 1px solid var(--border-warning); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1200px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Timetable</span>
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:16px;flex-wrap:wrap">
+      <div>
+        <h1 id="title" style="margin-bottom:4px"></h1>
+        <p class="muted" id="subtitle" style="margin:0"></p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="publish" type="button" hidden>Publish</button>
+        <button class="btn" id="export" type="button">Export</button>
+        <a class="btn" id="edit-link" href="#" hidden>Request a change</a>
+        <a class="btn" id="versions-link" href="#" hidden>Versions</a>
+      </div>
+    </div>
+
+    <div id="sample-banner" hidden class="alert alert-info" style="margin-top:14px">
+      <strong>This is a sample.</strong>
+      It was generated on our example school, not your data, so it cannot be
+      published, edited or exported as your own timetable. Everything you see
+      here is real output from the same pipeline your school would use.
+    </div>
+
+    <div class="feature-grid" id="stats" style="margin:18px 0"></div>
+
+    <!-- Export ---------------------------------------------------------- -->
+    <div class="card" id="export-panel" hidden style="margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Export this timetable</h3>
+        <button class="btn small" id="export-close" type="button">Close</button>
+      </div>
+      <div id="export-empty" hidden class="small muted" style="margin-top:10px">
+        No export templates yet.
+        <a href="export-templates.html">Create one</a> to choose the columns
+        your school system expects.
+      </div>
+      <div id="export-body" hidden>
+        <div class="field" style="margin-top:10px">
+          <label for="export-template">Template</label>
+          <select id="export-template"></select>
+        </div>
+        <div class="small muted" id="export-meta"></div>
+        <div id="export-preview" style="font-family:ui-monospace,Menlo,Consolas,monospace;
+             font-size:12px;background:var(--surface-2);border-radius:var(--radius-md);
+             padding:12px;overflow-x:auto;white-space:pre;margin-top:8px"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn btn-primary" id="export-download" type="button">
+            Download CSV
+          </button>
+          <a class="btn" href="export-templates.html">Manage templates</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-view="class">By class</button>
+      <button class="tab" data-view="teacher">By teacher</button>
+      <button class="tab" data-view="room">By room</button>
+      <button class="tab" data-view="student">By student</button>
+      <button class="tab" data-view="transport">Transport</button>
+      <button class="tab" data-view="duties">Duties</button>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="picker" id="picker">
+        <select id="key" style="max-width:340px"></select>
+        <input id="filter" placeholder="Filter..." style="max-width:200px">
+        <span class="muted small" id="count"></span>
+      </div>
+      <div style="overflow-x:auto;margin-top:14px" id="grid-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/output.js"></script>
+
+</body>
+</html>

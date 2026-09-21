@@ -1,0 +1,73 @@
+﻿Provider pools: {'groq': 1, 'mistral': 3, 'openrouter': 1}
+
+Model assignments for this run:
+  task_block_campus_fallback       groq
+  task_block_campus_primary        gemini
+  task_class_group_formation       gemini
+  task_interpret                   gemini
+  task_teacher_fallback            groq
+  task_teacher_primary             gemini
+  validator_1                      gemini
+  validator_2                      gpt_oss
+  validator_3                      groq
+  validator_4                      mistral_small
+
+  PASS  pre-validation
+
+Generating for Westfield College...
+
+
+  PASS  generation completed - 54 entries, 21 classes, 3 attempt(s), 397s
+  PASS  timetable passes every hard constraint
+
+Validators:
+  deterministic    pass
+  gemini           error - openrouter/google/gemini-2.5-flash: Error code: 402 - {'error': {'message': 'Thi
+  gpt_oss          fail - Day 3: Grace Lim and Peter Novak each have two duties (bus supervision and yard 
+  groq             rate_limited - rate limited on day 5
+  mistral_small    rate_limited - rate limited on day 1
+  deterministic    pass
+  gemini           error - openrouter/google/gemini-2.5-flash: Error code: 402 - {'error': {'message': 'Thi
+  gpt_oss          pass
+  groq             fail - Day 2: Teacher Tom Fitzgerald is assigned to two duties (yard duty at lunch and 
+  mistral_small    rate_limited - rate limited on day 1
+  deterministic    pass
+  gemini           error - openrouter/google/gemini-2.5-flash: Error code: 402 - {'error': {'message': 'Thi
+  gpt_oss          pass
+  groq             pass
+  mistral_small    rate_limited - rate limited on day 1
+  PASS  quorum reached with real models - 5 of 4 responded
+  PASS  deterministic validator passed
+
+Model switches: 0
+  PASS  AI calls that errored - 3
+
+MODEL             CALLS   OK  429  ERR    TOKENS   AVG ms
+gemini                3    0    0    3         0      220
+gpt_oss              13   13    0    0    32,446   18,877
+groq                 18   11    7    0    27,362    1,352
+magistral            27    0   27    0         0      473
+mistral_small         9    0    9    0         0      425
+
+Total tokens actually billed: 59,808 across 70 calls
+
+STAGE                                 TOKENS
+validate_validator_3_day1              8,092
+validate_validator_2_day1              7,892
+validate_validator_2_day3              7,841
+validate_validator_2_day2              7,627
+validate_validator_3_day2              7,183
+validate_validator_2_day5              4,838
+validate_validator_3_day4              4,769
+validate_validator_3_day3              4,729
+validate_validator_2_day4              4,248
+validate_validator_3_day5              2,589
+layer1_subject_map                         0
+layer3_period_slots                        0
+layer5_teachers                            0
+validate_validator_1_day1                  0
+validate_validator_4_day1                  0
+
+Cleaned up.
+
+All checks passed.

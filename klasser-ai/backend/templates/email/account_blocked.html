@@ -1,0 +1,26 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Your account has been blocked</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, generating is currently blocked for {{ school_name }}.
+</p>
+
+{{ m.alert(blocked_reason, "danger") }}
+
+{{ m.panel([("Outstanding", "$" ~ outstanding_dollars)]) }}
+
+<p style="margin:0 0 14px">
+  Timetables you have already generated are unaffected - you can still open, view and export them. Only new generations are paused.
+</p>
+
+{{ m.button(resolve_url, "Resolve this") }}
+
+<p style="margin:0">
+  If you think this is wrong, <a href="{{ support_url }}" style="color:#6366F1">tell us</a> and we will look straight away.
+</p>
+
+
+{% endblock %}

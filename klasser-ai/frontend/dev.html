@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dev portal - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .tiles { display: grid; gap: 12px; margin-bottom: 18px;
+             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    .tile { background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 14px; }
+    .tile b { display: block; font-size: 24px; font-weight: 700; }
+    .tile span { font-size: 11px; color: var(--slate); }
+    .tile.bad b { color: var(--text-danger); }
+    .tile.warn b { color: var(--text-warning); }
+    .chip { font-size: 10px; padding: 2px 7px; border-radius: 999px;
+            background: var(--surface-1); color: var(--slate); }
+    .chip.ok { background: var(--bg-success); color: var(--text-success); }
+    .chip.bad { background: var(--bg-danger); color: var(--text-danger); }
+    .chip.warn { background: var(--bg-warning); color: var(--text-warning); }
+    .mono { font-family: ui-monospace, Menlo, Consolas, monospace;
+            font-size: 11px; }
+    .wrap { overflow-x: auto; }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end;
+               margin-bottom: 12px; }
+    .filters .field { margin: 0; }
+    td .detail { color: var(--slate); font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1200px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Dev portal</span>
+    <h1 style="margin-bottom:14px">Platform</h1>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="generations">Generations</button>
+      <button class="tab" data-tab="errors">Errors</button>
+      <button class="tab" data-tab="logs">Logs</button>
+      <button class="tab" data-tab="schools">Schools</button>
+      <button class="tab" data-tab="users">Users</button>
+      <button class="tab" data-tab="money">Money</button>
+      <button class="tab" data-tab="models">Models &amp; keys</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </div>
+
+    <!-- Generations ----------------------------------------------------- -->
+    <div class="card panel" id="panel-generations" style="margin-top:16px">
+      <div class="filters">
+        <div class="field">
+          <label for="gen-state">Status</label>
+          <select id="gen-state">
+            <option value="">All</option>
+            <option value="processing">Processing</option>
+            <option value="failed">Failed</option>
+            <option value="complete">Complete</option>
+          </select>
+        </div>
+        <button class="btn" data-reload="generations" type="button">Refresh</button>
+      </div>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Timetable</th><th>School</th><th>Status</th>
+          <th>Attempts</th><th>Entries</th><th>Credits</th><th>When</th></tr></thead>
+        <tbody id="generations-rows"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Errors ---------------------------------------------------------- -->
+    <div class="card panel" id="panel-errors" hidden style="margin-top:16px">
+      <div class="filters">
+        <div class="field">
+          <label for="err-resolved">Show</label>
+          <select id="err-resolved">
+            <option value="false">Open</option>
+            <option value="true">Resolved</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="err-fault">Fault</label>
+          <select id="err-fault">
+            <option value="">Either</option>
+            <option value="true">Ours</option>
+            <option value="false">School data</option>
+          </select>
+        </div>
+        <button class="btn" data-reload="errors" type="button">Refresh</button>
+      </div>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Error</th><th>School</th><th>Fault</th>
+          <th>Charged</th><th>When</th><th></th></tr></thead>
+        <tbody id="errors-rows"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Logs ------------------------------------------------------------ -->
+    <div class="card panel" id="panel-logs" hidden style="margin-top:16px">
+      <h3 style="margin-top:0">Last 7 days by model</h3>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Model</th><th>Calls</th><th>Tokens</th>
+          <th>Avg latency</th><th>Failures</th></tr></thead>
+        <tbody id="models-summary"></tbody>
+      </table></div>
+
+      <h3>Pipeline log</h3>
+      <div class="filters">
+        <div class="field">
+          <label for="log-stage">Stage</label>
+          <input id="log-stage" placeholder="layer3_period_slots" maxlength="60">
+        </div>
+        <button class="btn" data-reload="logs" type="button">Refresh</button>
+      </div>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>When</th><th>Stage</th><th>Model</th><th>Status</th>
+          <th>Tokens</th><th>ms</th><th>School</th></tr></thead>
+        <tbody id="logs-rows"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Schools --------------------------------------------------------- -->
+    <div class="card panel" id="panel-schools" hidden style="margin-top:16px">
+      <div class="wrap"><table class="table">
+        <thead><tr><th>School</th><th>Mode</th><th>Balance</th><th>Reserved</th>
+          <th>Spent</th><th>Timetables</th><th>Status</th><th></th></tr></thead>
+        <tbody id="schools-rows"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Users ----------------------------------------------------------- -->
+    <div class="card panel" id="panel-users" hidden style="margin-top:16px">
+      <div class="filters">
+        <div class="field">
+          <label for="user-search">Search</label>
+          <input id="user-search" placeholder="name, email or school">
+        </div>
+        <button class="btn" data-reload="users" type="button">Search</button>
+      </div>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Name</th><th>Email</th><th>School</th><th>Role</th>
+          <th>Status</th><th>Joined</th></tr></thead>
+        <tbody id="users-rows"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Money ----------------------------------------------------------- -->
+    <div class="card panel" id="panel-money" hidden style="margin-top:16px">
+      <h3 style="margin-top:0">Outstanding</h3>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>School</th><th>Type</th><th>Days</th><th>Original</th>
+          <th>Interest</th><th>Owed</th><th></th></tr></thead>
+        <tbody id="outstanding-rows"></tbody>
+      </table></div>
+
+      <h3>Invoices</h3>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Invoice</th><th>School</th><th>Period</th><th>Due</th>
+          <th>Status</th><th>Amount</th></tr></thead>
+        <tbody id="invoices-rows"></tbody>
+      </table></div>
+
+      <h3>Invoiced billing applications</h3>
+      <div id="applications"></div>
+
+      <h3>Scheduled jobs</h3>
+      <div id="jobs"></div>
+
+      <h3>Adjust credits</h3>
+      <div class="filters">
+        <div class="field">
+          <label for="adj-school">School</label>
+          <select id="adj-school"></select>
+        </div>
+        <div class="field">
+          <label for="adj-amount">Credits</label>
+          <input id="adj-amount" type="number" value="100">
+        </div>
+        <div class="field" style="flex:1">
+          <label for="adj-note">Why</label>
+          <input id="adj-note" placeholder="Reason, recorded against the account">
+        </div>
+        <button class="btn btn-primary" id="adjust" type="button">Apply</button>
+      </div>
+    </div>
+
+    <!-- Models and keys -------------------------------------------------- -->
+    <div class="card panel" id="panel-models" hidden style="margin-top:16px">
+      <h3 style="margin-top:0">Task assignments</h3>
+      <p class="small muted">
+        Which model runs each job. Changing one takes effect on the next
+        generation.
+      </p>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Task</th><th>Model</th><th>Provider</th>
+          <th>Keys</th></tr></thead>
+        <tbody id="assign-rows"></tbody>
+      </table></div>
+
+      <h3>Key pools</h3>
+      <div id="pools"></div>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Provider</th><th>Label</th><th>Account</th><th>Key</th>
+          <th>Active</th><th></th></tr></thead>
+        <tbody id="keys-rows"></tbody>
+      </table></div>
+
+      <h3>Add a key</h3>
+      <div class="filters">
+        <div class="field">
+          <label for="key-provider">Provider</label>
+          <select id="key-provider"></select>
+        </div>
+        <div class="field">
+          <label for="key-label">Label</label>
+          <input id="key-label" placeholder="Key 4">
+        </div>
+        <div class="field">
+          <label for="key-account">Account</label>
+          <input id="key-account" placeholder="optional">
+        </div>
+        <div class="field" style="flex:1">
+          <label for="key-value">Key</label>
+          <input id="key-value" type="password" placeholder="never shown again">
+        </div>
+        <button class="btn btn-primary" id="add-key" type="button">Add</button>
+      </div>
+    </div>
+
+    <!-- Settings --------------------------------------------------------- -->
+    <div class="card panel" id="panel-settings" hidden style="margin-top:16px">
+      <p class="small muted">
+        Every value the platform reads at runtime. Saved on change.
+      </p>
+      <div class="filters">
+        <div class="field" style="flex:1">
+          <label for="setting-search">Filter</label>
+          <input id="setting-search" placeholder="credit, quorum, queue...">
+        </div>
+      </div>
+      <div class="wrap"><table class="table">
+        <thead><tr><th>Key</th><th>Value</th><th>Category</th>
+          <th>What it does</th></tr></thead>
+        <tbody id="settings-rows"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dev.js"></script>
+
+</body>
+</html>

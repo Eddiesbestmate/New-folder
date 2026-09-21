@@ -1,0 +1,24 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Welcome to Klasser, {{ first_name }}</h1>
+
+<p style="margin:0 0 14px">
+  {{ school_name }} is set up and ready. Before you point Klasser at your own
+  data, run the free sample - it generates a real timetable on our example
+  school so you can see what comes out, without setting anything up.
+</p>
+
+{{ m.button(login_url, "Open your dashboard") }}
+
+<p style="margin:0 0 6px;font-weight:600">Getting started</p>
+<ol style="margin:0;padding-left:20px;color:#6B6B8A">
+  <li style="margin-bottom:4px">Add your campuses, rooms and cycle structure</li>
+  <li style="margin-bottom:4px">Import teachers and students from a spreadsheet</li>
+  <li style="margin-bottom:4px">Generate, review, and publish</li>
+</ol>
+
+{{ m.signoff() }}
+
+{% endblock %}

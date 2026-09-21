@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Generation paused - payment needed</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, <strong>{{ timetable_name }}</strong> stopped because we could not charge the card on file for {{ school_name }}.
+</p>
+
+{{ m.panel([("Amount", "$" ~ (amount_needed_cents / 100) | round(2)), ("Card", "ending " ~ card_last_four)]) }}
+
+<p style="margin:0 0 14px">
+  Update the payment method and the run continues from where it stopped.
+</p>
+
+{{ m.button(update_payment_url, "Update payment method") }}
+{% endblock %}

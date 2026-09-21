@@ -1,0 +1,185 @@
+﻿.\venv\Scripts\python.exe : 11:56:07  WARNING klasser.db  DATABASE_SSL=disable - connecting to Postgres WITHOUT TLS. 
+The password and all data cross the network in cleartext. Local development only; never deploy with this set.
+At line:1 char:365
++ ... i\backend"; .\venv\Scripts\python.exe test_live.py > live.log 2> live ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (11:56:07  WARNI... with this set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+11:56:07  INFO    klasser.db  Database connected: PostgreSQL 17.6 on x86_64-pc-linux-gnu
+11:56:07  INFO    klasser.ai  AI key pools loaded: {'groq': 1, 'mistral': 3, 'openrouter': 1}
+11:56:12  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:12  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:56:18  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:18  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:56:23  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:23  WARNING klasser.pipeline  Subject mapping unavailable (mistral/magistral-medium-latest rate limited after 3 
+attempts) - using configured settings
+11:56:26  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:26  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:56:32  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:32  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:56:37  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:37  WARNING klasser.pipeline  Slot assignment fell back to deterministic fill: mistral/magistral-medium-latest 
+rate limited after 3 attempts
+11:56:39  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:39  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:56:44  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:44  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:56:50  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:50  WARNING klasser.pipeline  Teacher preference unavailable for Computing (mistral/magistral-medium-latest rate 
+limited after 3 attempts) - balancing by load
+11:56:51  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:51  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:56:56  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:56:56  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:57:02  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:02  WARNING klasser.pipeline  Teacher preference unavailable for English (mistral/magistral-medium-latest rate 
+limited after 3 attempts) - balancing by load
+11:57:02  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:02  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:57:08  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:08  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:57:13  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:13  WARNING klasser.pipeline  Teacher preference unavailable for Geography (mistral/magistral-medium-latest rate 
+limited after 3 attempts) - balancing by load
+11:57:14  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:14  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:57:19  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:19  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:57:25  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:25  WARNING klasser.pipeline  Teacher preference unavailable for History (mistral/magistral-medium-latest rate 
+limited after 3 attempts) - balancing by load
+11:57:25  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:25  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:57:31  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:31  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:57:36  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:36  WARNING klasser.pipeline  Teacher preference unavailable for Mathematics (mistral/magistral-medium-latest 
+rate limited after 3 attempts) - balancing by load
+11:57:37  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:37  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:57:43  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:43  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:57:48  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:48  WARNING klasser.pipeline  Teacher preference unavailable for PE (mistral/magistral-medium-latest rate 
+limited after 3 attempts) - balancing by load
+11:57:49  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:49  WARNING klasser.ai  mistral/magistral attempt 1 failed (rate_limited) - retrying on next key
+11:57:54  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:57:54  WARNING klasser.ai  mistral/magistral attempt 2 failed (rate_limited) - retrying on next key
+11:58:00  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:00  WARNING klasser.pipeline  Teacher preference unavailable for Science (mistral/magistral-medium-latest rate 
+limited after 3 attempts) - balancing by load
+11:58:11  INFO    klasser.deterministic  Solution check for version a4a4d6e7-b53e-43d4-82fd-9e53bcb8ec3d: pass
+11:58:12  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 402 Payment 
+Required"
+11:58:12  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:12  WARNING klasser.ai  mistral/mistral_small attempt 1 failed (rate_limited) - retrying on next key
+11:58:13  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+11:58:14  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+11:58:16  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+11:58:17  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:17  WARNING klasser.ai  mistral/mistral_small attempt 2 failed (rate_limited) - retrying on next key
+11:58:18  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+11:58:18  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:19  WARNING klasser.ai  groq/groq attempt 1 failed (rate_limited) - retrying on next key
+11:58:23  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:24  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:24  WARNING klasser.ai  groq/groq attempt 2 failed (rate_limited) - retrying on next key
+11:58:31  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+11:58:31  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:31  WARNING klasser.ai  groq/groq attempt 1 failed (rate_limited) - retrying on next key
+11:58:36  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:58:36  WARNING klasser.ai  groq/groq attempt 2 failed (rate_limited) - retrying on next key
+11:58:41  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:59:00  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+11:59:09  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+11:59:25  WARNING klasser.pipeline  Attempt 1 failed at layer10_validation: Day 3: Grace Lim and Peter Novak each have 
+two duties (bus supervision and yard duty) on day 3, while several other teachers have no duties, suggesting an unfair 
+duty allocation.
+11:59:37  INFO    klasser.deterministic  Solution check for version 3c8a79e6-bd88-4cc7-8137-97cb954b6d3a: pass
+11:59:37  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 402 Payment 
+Required"
+11:59:38  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+11:59:38  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:59:38  WARNING klasser.ai  mistral/mistral_small attempt 1 failed (rate_limited) - retrying on next key
+11:59:39  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+11:59:42  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+11:59:43  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+11:59:43  WARNING klasser.ai  mistral/mistral_small attempt 2 failed (rate_limited) - retrying on next key
+11:59:45  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+11:59:49  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+12:00:03  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:00:19  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:00:38  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:01:21  WARNING klasser.pipeline  Attempt 2 failed at layer10_validation: Day 2: Teacher Tom Fitzgerald is assigned 
+to two duties (yard duty at lunch and bus supervision after school) on the same day despite having only 1 teaching 
+period per cycle, indicating an unfair duty allocation.
+12:01:33  INFO    klasser.deterministic  Solution check for version 656aad53-6cce-4434-8946-43ccceb5c6fa: pass
+12:01:34  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 402 Payment 
+Required"
+12:01:34  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+12:01:34  WARNING klasser.ai  mistral/mistral_small attempt 1 failed (rate_limited) - retrying on next key
+12:01:34  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:01:35  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+12:01:38  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+12:01:39  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+12:01:40  WARNING klasser.ai  mistral/mistral_small attempt 2 failed (rate_limited) - retrying on next key
+12:01:40  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+12:01:42  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+12:01:43  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+12:01:43  WARNING klasser.ai  groq/groq attempt 1 failed (rate_limited) - retrying on next key
+12:01:45  INFO    httpx2  HTTP Request: POST https://api.mistral.ai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+12:01:48  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many 
+Requests"
+12:01:48  WARNING klasser.ai  groq/groq attempt 2 failed (rate_limited) - retrying on next key
+12:01:52  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:01:56  INFO    httpx2  HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+12:02:21  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:02:31  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:02:33  INFO    httpx2  HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+12:02:46  INFO    klasser.deterministic  Solution check for version 656aad53-6cce-4434-8946-43ccceb5c6fa: pass
+12:02:51  INFO    klasser.db  Database pool closed

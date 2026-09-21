@@ -1,0 +1,41 @@
+﻿
+Job queue
+
+  PASS  enqueue returns a job id                                                            
+  PASS  new job is queued                                                                   
+  PASS  a second live job for the same timetable is refused                                 
+  PASS  only one job row exists for that timetable - 1                                      
+  PASS  urgent job is claimed before the standard one - 57d1cc42-e968-4456-b069-76c556ac27ef
+  PASS  claiming counts an attempt - 1                                                      
+  PASS  claimed job is running                                                              
+  PASS  two workers each claimed a job - 2                                                  
+  PASS  concurrent claims never return the same job - ['bdc03838', '264b125c']              
+  FAIL  the remaining queued job is claimed next                                            
+  PASS  claiming an empty queue returns nothing                                             
+  PASS  a failed job with attempts left requeues - queued                                   
+  PASS  requeued job is delayed by backoff                                                  
+  PASS  the failure reason is kept - provider timed out                                     
+  PASS  a job still inside its backoff is not claimed                                       
+  PASS  a job out of attempts is not requeued - failed                                      
+  PASS  exhausted job becomes a dead letter                                                 
+  PASS  job claimed                                                                         
+  PASS  stale job reclaimed - 1                                                             
+  PASS  a dead worker's job returns to the queue                                            
+  PASS  the recovered job can be claimed again                                              
+  PASS  a job with a fresh heartbeat is not reclaimed - 0 reclaimed                         
+  PASS  a repeatedly stale job is failed, not requeued forever                              
+  PASS  its timetable is marked failed rather than left processing - failed                 
+  PASS  a queued job can be cancelled                                                       
+  PASS  cancelled status recorded                                                           
+  PASS  a running job cannot be cancelled                                                   
+  PASS  a job cannot be cancelled by another school                                         
+  PASS  failed jobs counted - 2                                                             
+  PASS  cancelled jobs counted - 1                                                          
+  PASS  recent jobs listed - 8 rows                                                         
+  PASS  other school sees its own job                                                       
+  PASS  a school does not see another school's jobs                                         
+  PASS  GET /allocation/queue - HTTP 200                                                    
+  PASS  queue endpoint reports jobs and totals                                              
+  PASS  test data cleaned up - 0 left                                                       
+
+1 of 36 checks failed.

@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Generation paused - not enough credits</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, <strong>{{ timetable_name }}</strong> stopped partway because {{ school_name }} ran out of credits.
+</p>
+
+{{ m.panel([("Needed", credits_needed), ("Available", credits_available), ("Stopped at", paused_stage)]) }}
+
+<p style="margin:0 0 14px">
+  The work done so far is kept. Top up and the run picks up from where it stopped rather than starting again.
+</p>
+
+{{ m.button(top_up_url, "Top up credits") }}
+{% endblock %}

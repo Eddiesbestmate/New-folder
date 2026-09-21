@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Verify your email address</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, confirm this address to finish setting up your Klasser account.
+</p>
+
+{{ m.button(verify_url, "Verify my email") }}
+
+<p style="margin:0">
+  This link works for {{ expires_hours }} hours. If you did not create a Klasser account, you can ignore this email - nothing will happen.
+</p>
+
+
+{% endblock %}

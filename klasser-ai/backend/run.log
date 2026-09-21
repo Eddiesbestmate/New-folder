@@ -1,0 +1,47 @@
+﻿
+Phase 6 - generation pipeline
+
+  PASS  sandbox school found                                                                         
+  PASS  sandbox data passes pre-validation                                                           
+  PASS  timetable entries written - 54                                                               
+  PASS  class groups formed - 21                                                                     
+  PASS  all eleven stages completed - 11                                                             
+  PASS  no stage left in progress or failed                                                          
+  PASS  generated timetable passes every hard check                                                  
+  PASS  every class got at least its minimum periods - 0 short                                       
+  PASS  no class exceeded its maximum periods - 0 over                                               
+  PASS  student registry written - 567                                                               
+  PASS  teacher registry written - 54                                                                
+  PASS  room registry written - 54                                                                   
+  PASS  consistency registry written - 21                                                            
+  PASS  each class keeps the same teacher and room all cycle - 0 inconsistent                        
+  PASS  every class member appears in the timetable - 0 missing                                      
+  PASS  denormalised day_number matches its period - 0                                               
+  PASS  duties assigned - 50                                                                         
+  PASS  duty rules respected                                                                         
+  PASS  the duty-exempt teacher got no duties - 0                                                    
+  PASS  transport solved for the two-campus school - 49 movements                                    
+  PASS  version created as a draft                                                                   
+  PASS  first version numbered 1                                                                     
+  PASS  progress events emitted - 22 events                                                          
+  PASS  job finished at 100% - complete 100%                                                         
+  PASS  deterministic result recorded                                                                
+  PASS  deterministic passed                                                                         
+  PASS  five validator results recorded - 5                                                          
+  PASS  every validator saw every day - 20 prompts, expected 5 days x 4 validators                   
+  PASS  a day chunk holds every entry for that day - 14 of 14                                        
+  PASS  chunk is marked complete                                                                     
+  PASS  prompt states the day is complete                                                            
+  PASS  cycle totals cover every entry - 54 vs 54                                                    
+  PASS  prompt carries cycle-wide totals                                                             
+  PASS  failure reason comes from the validator - Day 1: stub validator was told to fail             
+  PASS  validation stage marked failed - failed                                                      
+  PASS  no-AI run fails for lack of validators - Only 0 of 4 validators responded; 2 are required.   
+  PASS  a draft was still produced without AI                                                        
+  PASS  AI-free allocation is legal on every hard constraint                                         
+  PASS  validator errors recorded rather than ignored - 5 rows                                       
+  PASS  empty school fails pre-validation                                                            
+  PASS  pre-validation names what is missing - No teachers. Add or import teachers before generating.
+  PASS  test data cleaned up - 0 left                                                                
+
+All 42 checks passed.

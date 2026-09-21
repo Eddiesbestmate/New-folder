@@ -1,0 +1,35 @@
+{# Base layout for every Klasser email.
+
+   Table-free but inline-styled throughout: email clients strip <style> blocks,
+   and Outlook ignores most of what survives. Everything here degrades to a
+   readable left-aligned document if the CSS is dropped entirely. #}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Klasser</title>
+</head>
+<body style="background:#F7F7FB;font-family:Outfit,system-ui,-apple-system,sans-serif;padding:32px 16px;margin:0;color:#1A1A2E">
+  <div style="max-width:560px;margin:0 auto">
+
+    <div style="background:#6366F1;border-radius:12px 12px 0 0;padding:20px 28px">
+      <span style="font-size:18px;font-weight:700;color:#fff">Klass<span style="color:#F5A623">er</span></span>
+    </div>
+
+    <div style="background:#fff;border-radius:0 0 12px 12px;padding:28px;border:1px solid #E4E4EF;border-top:none;font-size:14px;line-height:1.6">
+      {% block content %}{% endblock %}
+    </div>
+
+    <div style="text-align:center;padding:20px;font-size:11px;color:#9090B0">
+      <p style="margin:0">Klasser &middot; AI-powered school timetabling</p>
+      <p style="margin:6px 0 0">
+        <a href="{{ app_url }}/notifications.html" style="color:#6366F1">Notification preferences</a>
+        &middot;
+        <a href="{{ app_url }}/support.html" style="color:#6366F1">Support</a>
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generate a timetable - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Generate</span>
+    <h1>Generate a timetable</h1>
+
+    <!-- Readiness -------------------------------------------------------- -->
+    <div class="card" id="readiness" style="margin-bottom:16px">
+      <h3>Before you start</h3>
+      <ul class="progress-list" id="steps"></ul>
+      <p id="ready-note" class="small" style="margin:14px 0 0"></p>
+    </div>
+
+    <!-- Cost ------------------------------------------------------------- -->
+    <div class="card" style="margin-bottom:16px">
+      <h3>What this will cost</h3>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table class="table">
+          <thead>
+            <tr><th>Item</th><th></th><th style="text-align:right">Credits</th></tr>
+          </thead>
+          <tbody id="cost-lines"></tbody>
+          <tfoot>
+            <tr>
+              <th>Total</th><th></th>
+              <th style="text-align:right" id="cost-total"></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div id="balance" class="small" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Start ------------------------------------------------------------ -->
+    <div class="card">
+      <h3>Start</h3>
+      <div class="field" style="max-width:420px;margin-top:10px">
+        <label for="name">Name this timetable</label>
+        <input id="name" maxlength="200" placeholder="Semester 1 2027">
+      </div>
+      <div class="field" style="max-width:420px">
+        <label for="notify">Email when it finishes</label>
+        <input id="notify" type="email">
+      </div>
+      <button class="btn btn-primary" id="start" type="button">
+        Generate timetable
+      </button>
+      <p class="muted small" style="margin:12px 0 0">
+        Generation runs in the background. You can close this page and come back
+        to it - the progress screen picks up where it left off.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const alertBox = document.getElementById('alert');
+  document.getElementById('logout').addEventListener('click', logout);
+
+  let estimate = null;
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  function renderCost(e) {
+    document.getElementById('cost-lines').innerHTML = e.lines.map((l) => `
+      <tr>
+        <td>${escapeHtml(l.label)}</td>
+        <td class="muted">${escapeHtml(l.detail)}</td>
+        <td style="text-align:right">${l.credits}</td>
+      </tr>`).join('');
+
+    document.getElementById('cost-total').textContent = `${e.total_credits} credits`;
+
+    const box = document.getElementById('balance');
+    if (e.billing_mode === 'credits') {
+      const after = e.available - e.total_credits;
+      box.className = e.can_afford ? 'alert alert-success small' : 'alert alert-error small';
+      box.textContent = e.can_afford
+        ? `Balance ${e.available} credits. ${after} would remain after this run.`
+        : `Balance ${e.available} credits - ${e.total_credits - e.available} short.`;
+    } else {
+      box.className = 'alert alert-info small';
+      box.textContent = e.billing_mode === 'payg'
+        ? 'Pay as you go: charged after the timetable is generated.'
+        : 'Invoiced billing: this run is added to your monthly invoice.';
+    }
+  }
+
+  function renderSteps(progress) {
+    document.getElementById('steps').innerHTML = progress.steps
+      .filter((s) => s.required || s.key === 'step_layout')
+      .map((s) => `
+        <li>
+          <span class="tick ${s.complete ? 'done' : 'pending'}">${s.complete ? '&check;' : '&#9675;'}</span>
+          <span>${s.label}${s.count != null ? ` (${s.count})` : ''}</span>
+        </li>`).join('');
+
+    const note = document.getElementById('ready-note');
+    if (progress.ready_to_generate) {
+      note.className = 'alert alert-success small';
+      note.textContent = 'Everything needed is in place.';
+    } else {
+      note.className = 'alert alert-warning small';
+      note.textContent = `Still needed: ${progress.missing.join(', ')}.`;
+    }
+    return progress.ready_to_generate;
+  }
+
+  document.getElementById('start').addEventListener('click', async () => {
+    hideAlert(alertBox);
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+      showAlert(alertBox, 'Give the timetable a name.');
+      return;
+    }
+    if (estimate && estimate.billing_mode === 'credits' && !estimate.can_afford) {
+      showAlert(alertBox, 'Not enough credits for this run.');
+      return;
+    }
+
+    const btn = document.getElementById('start');
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+    try {
+      const res = await apiCall('POST', '/allocation/start', {
+        name,
+        notify_email: document.getElementById('notify').value.trim() || null,
+      });
+      window.location.href = `progress.html?timetable=${res.timetable_id}`;
+    } catch (err) {
+      // The pre-validator returns a list of problems with the school's data.
+      showAlert(alertBox, err.message);
+      btn.disabled = false;
+      btn.textContent = 'Generate timetable';
+    }
+  });
+
+  (async () => {
+    const me = await requireLogin();
+    if (!me) return;
+
+    document.getElementById('who').textContent =
+      `${me.first_name} ${me.surname} - ${me.role}`;
+    document.getElementById('notify').value = me.email;
+    document.getElementById('name').value =
+      `${me.school_name} - ${new Date().getFullYear()}`;
+
+    const [progress, est] = await Promise.all([
+      apiCall('GET', '/onboarding/progress'),
+      apiCall('GET', '/timetables/estimate'),
+    ]);
+
+    estimate = est;
+    const ready = renderSteps(progress);
+    renderCost(est);
+
+    if (!ready) document.getElementById('start').disabled = true;
+    if (est.account_blocked) {
+      showAlert(alertBox,
+        'This account is blocked for an outstanding balance. Generation is unavailable.');
+      document.getElementById('start').disabled = true;
+    }
+
+    document.getElementById('loading').hidden = true;
+    document.getElementById('content').hidden = false;
+  })().catch((err) => {
+    document.getElementById('loading').hidden = true;
+    showAlert(alertBox, err.message);
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .ticket { border: 1px solid var(--border); border-radius: var(--radius-md);
+              padding: 14px; margin-bottom: 10px; }
+    .ticket .head { display: flex; justify-content: space-between;
+                    align-items: baseline; gap: 12px; }
+    .ticket .subject { font-weight: 600; }
+    .ticket .body { font-size: 13px; color: var(--slate); margin-top: 8px;
+                    white-space: pre-wrap; }
+    .chip { font-size: 11px; padding: 2px 8px; border-radius: 999px;
+            background: var(--surface-1); color: var(--slate); }
+    .chip.urgent { background: var(--bg-danger); color: var(--text-danger); }
+    .chip.high { background: var(--bg-warning); color: var(--text-warning); }
+    .chip.open { background: var(--bg-accent); color: var(--text-accent); }
+    .chip.resolved { background: var(--bg-success); color: var(--text-success); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:820px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Support</span>
+    <h1 style="margin-bottom:4px">Get help</h1>
+    <p class="muted">
+      Tell us what happened and we will look into it. Attaching a timetable
+      sends the generation log with your ticket.
+    </p>
+
+    <!-- New ticket ----------------------------------------------------- -->
+    <div class="card">
+      <h3 style="margin-top:0">New ticket</h3>
+      <div id="form-alert" hidden></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label for="category">What is it about?</label>
+          <select id="category">
+            <option value="generation">Generation - errors or odd results</option>
+            <option value="billing">Billing - credits, invoices, charges</option>
+            <option value="data">Data - imports or school data</option>
+            <option value="account">Account - users, access, login</option>
+            <option value="other">Something else</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="timetable">Attach a timetable (optional)</label>
+          <select id="timetable"><option value="">None</option></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="subject">Subject</label>
+        <input id="subject" maxlength="200" placeholder="Short summary">
+      </div>
+
+      <div class="field">
+        <label for="body">What happened?</label>
+        <textarea id="body" rows="5" maxlength="5000"
+                  placeholder="What you were doing, what you expected, and what happened instead."></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
+        <button class="btn btn-primary" id="submit" type="button">Send ticket</button>
+        <span class="small muted" id="priority-hint"></span>
+      </div>
+    </div>
+
+    <!-- Existing tickets ------------------------------------------------ -->
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">Your tickets</h3>
+      <div id="tickets"></div>
+    </div>
+
+    <!-- Contact --------------------------------------------------------- -->
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">Need help faster?</h3>
+      <p class="small" id="contact"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/support.js"></script>
+
+</body>
+</html>

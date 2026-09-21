@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Invoiced billing approved</h1>
+
+<p style="margin:0 0 14px">
+  Good news {{ first_name }} - {{ school_name }} can now be invoiced monthly instead of prepaying.
+</p>
+
+{{ m.panel([("Billing contact", billing_contact_name), ("Invoices sent", "day " ~ invoice_sent_day ~ " of each month"), ("Payment terms", payment_days ~ " days"), ("Due", "day " ~ due_day)]) }}
+
+<p style="margin:0 0 14px">
+  Choose invoiced billing in your payment settings to switch over - we have not changed it for you.
+</p>
+
+{{ m.button(billing_url, "Switch to invoiced billing") }}
+{% endblock %}

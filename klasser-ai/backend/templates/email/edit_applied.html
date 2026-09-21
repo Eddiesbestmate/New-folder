@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Your change has been applied</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, the change you asked for on <strong>{{ timetable_name }}</strong> has been made.
+</p>
+
+{{ m.panel([("You asked", request_text), ("We understood", ai_interpretation), ("Changed", changes_summary), ("Credits", credits_charged)]) }}
+
+<p style="margin:0 0 14px">
+  This is version {{ version_number }}, still a draft. It does not become the live timetable until you publish it.
+</p>
+
+{{ m.button(view_url, "Review the change") }}
+{% endblock %}

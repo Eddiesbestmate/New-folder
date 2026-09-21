@@ -1,0 +1,24 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Invoiced billing has been removed</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, {{ school_name }} has been moved off monthly invoicing because an invoice went unpaid for {{ days_overdue }} days.
+</p>
+
+{{ m.panel([("Outstanding", "$" ~ outstanding_dollars), ("Now billed as", new_billing_mode)]) }}
+
+<p style="margin:0 0 14px">
+  The outstanding balance still stands and has not changed. What has changed is that future generations are paid for up front.
+</p>
+
+{{ m.button(top_up_url, "View billing") }}
+
+<p style="margin:0">
+  To ask for invoiced billing again, <a href="{{ support_url }}" style="color:#6366F1">get in touch</a>.
+</p>
+
+
+{% endblock %}

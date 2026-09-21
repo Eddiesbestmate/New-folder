@@ -1,0 +1,62 @@
+﻿
+Phase 10 - billing
+
+  PASS  generated card passes the Luhn check - 9463                                                                                                                                         
+  PASS  card has a real-looking brand - Amex                                                                                                                                                
+  PASS  same input gives the same card                                                                                                                                                      
+  PASS  different input gives a different card                                                                                                                                              
+  PASS  masked number hides the body - ***********9463                                                                                                                                      
+  PASS  success rate 1.0 always succeeds                                                                                                                                                    
+  PASS  success rate 0.0 always declines                                                                                                                                                    
+  PASS  GET account - HTTP 200                                                                                                                                                              
+  PASS  new school starts at zero                                                                                                                                                           
+  PASS  default mode is credits                                                                                                                                                             
+  PASS  no generations affordable                                                                                                                                                           
+  PASS  generation refused for want of credits, not data - got 402: {"detail":{"message":"This generation needs 60 credits but only 0 are available. Top up before generating.","code":"insu
+  PASS  refusal names the reason - insufficient_credits                                                                                                                                     
+  PASS  refusal says how short they are - 60                                                                                                                                                
+  PASS  refused generation leaves no timetable row - 0                                                                                                                                      
+  PASS  five packages offered                                                                                                                                                               
+  PASS  trial available to a new school                                                                                                                                                     
+  PASS  purchase trial - HTTP 200                                                                                                                                                           
+  PASS  300 credits added - 300                                                                                                                                                             
+  PASS  purchase marked simulated                                                                                                                                                           
+  PASS  trial cannot be bought twice - got 409                                                                                                                                              
+  PASS  declined card returns 402 - got 402                                                                                                                                                 
+  PASS  declined purchase adds no credits - 300 -> 300                                                                                                                                      
+  PASS  estimate calculated - 60                                                                                                                                                            
+  PASS  credits held - 60                                                                                                                                                                   
+  PASS  available reduced by the hold - 240                                                                                                                                                 
+  PASS  balance untouched until settled - 300                                                                                                                                               
+  PASS  balance charged - 240                                                                                                                                                               
+  PASS  hold released - 0                                                                                                                                                                   
+  PASS  settling twice is refused                                                                                                                                                           
+  PASS  double settle does not double charge - 240                                                                                                                                          
+  PASS  school retries charged - 32                                                                                                                                                         
+  PASS  dev retries not charged - 240 -> 148                                                                                                                                                
+  PASS  hold released on failure - 0                                                                                                                                                        
+  PASS  failed generation is not charged - 148                                                                                                                                              
+  PASS  no unexpected errors in the race                                                                                                                                                    
+  PASS  two concurrent reservations, only one wins - 1 succeeded, 1 refused                                                                                                                 
+  PASS  exactly one run's credits are held - 60 of 60                                                                                                                                       
+  PASS  nothing left available - 0                                                                                                                                                          
+  PASS  reserved never exceeds balance - 60 of 60                                                                                                                                           
+  PASS  balance cannot go negative - 0                                                                                                                                                      
+  PASS  over-deduction is clamped - -60                                                                                                                                                     
+  PASS  GET transactions                                                                                                                                                                    
+  PASS  purchase logged                                                                                                                                                                     
+  PASS  generation logged                                                                                                                                                                   
+  PASS  released hold logged                                                                                                                                                                
+  PASS  log records the balance after each change - log 148 vs actual 148                                                                                                                   
+  PASS  save card - HTTP 200                                                                                                                                                                
+  PASS  card number never returned - ['brand', 'last_four', 'expires', 'masked', 'simulated']                                                                                               
+  PASS  switch to payg with a card saved                                                                                                                                                    
+  PASS  cannot remove the card while on payg - got 409                                                                                                                                      
+  PASS  invoiced needs approval - got 403                                                                                                                                                   
+  PASS  payg holds nothing up front - 0                                                                                                                                                     
+  PASS  owner cannot use dev adjust - got 403                                                                                                                                               
+  PASS  dev can adjust credits - 500                                                                                                                                                        
+  PASS  adjustment records who made it - billing.a.b5430301@example.com                                                                                                                     
+  PASS  test data cleaned up - 0 left                                                                                                                                                       
+
+All 57 checks passed.

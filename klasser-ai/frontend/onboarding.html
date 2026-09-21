@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set up your school - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Setup</span>
+    <h1>Set up your school</h1>
+    <p class="muted">
+      School details and billing are required first. The rest can be done in any
+      order, and you can come back at any time.
+    </p>
+
+    <!-- Progress ---------------------------------------------------------- -->
+    <div class="card" style="margin-bottom:20px">
+      <h3>Progress</h3>
+      <ul class="progress-list" id="progress"></ul>
+      <p id="ready" class="small" style="margin:14px 0 0"></p>
+    </div>
+
+    <!-- Step 1 ------------------------------------------------------------ -->
+    <div class="card" style="margin-bottom:20px">
+      <span class="eyebrow">Step 1 - required</span>
+      <h2 style="margin-top:8px">School details</h2>
+
+      <form id="details-form" novalidate>
+        <div class="field">
+          <label for="school_name">School name</label>
+          <input id="school_name" required maxlength="200">
+        </div>
+
+        <div class="field">
+          <label for="timezone">Timezone</label>
+          <select id="timezone" required></select>
+          <div class="hint">
+            Used for period times, invoice dates and scheduled jobs.
+          </div>
+        </div>
+
+        <label>Campuses</label>
+        <div id="campus-rows"></div>
+        <button class="btn small" type="button" id="add-campus"
+                style="margin-top:8px">+ Add campus</button>
+        <div class="hint" style="margin-top:6px">
+          A campus already used by rooms, teachers or students is never deleted
+          here - remove it from the data pages instead.
+        </div>
+
+        <button class="btn btn-primary" id="save-details" type="submit"
+                style="margin-top:16px">Save school details</button>
+      </form>
+    </div>
+
+    <!-- Step 2 ------------------------------------------------------------ -->
+    <div class="card" style="margin-bottom:20px">
+      <span class="eyebrow">Step 2 - required</span>
+      <h2 style="margin-top:8px">Billing</h2>
+      <p class="muted small">
+        Choose how you want to pay. Buying credits, adding a card and applying
+        for invoiced billing all come later - this just records your choice so
+        you can carry on setting up.
+      </p>
+
+      <div id="packages" class="feature-grid" style="margin:16px 0"></div>
+
+      <div class="field" style="max-width:320px">
+        <label for="billing_mode">Billing mode</label>
+        <select id="billing_mode">
+          <option value="credits">Prepaid credits</option>
+          <option value="payg">Pay as you go</option>
+          <option value="invoiced">Invoiced (requires approval)</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="save-billing" type="button">
+        Save billing choice
+      </button>
+    </div>
+
+    <!-- Later steps -------------------------------------------------------- -->
+    <div class="card">
+      <span class="eyebrow">Remaining steps</span>
+      <h2 style="margin-top:8px">Layout, data and transport</h2>
+      <p class="muted small">
+        These screens are built in the next phases. Progress above already
+        tracks them - it reads the actual data, so importing teachers from
+        anywhere will tick the Teachers step automatically.
+      </p>
+      <ul class="progress-list" id="upcoming"></ul>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/onboarding.js"></script>
+
+</body>
+</html>

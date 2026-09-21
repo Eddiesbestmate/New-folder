@@ -1,0 +1,17 @@
+﻿
+Deterministic checker - deliberate failures
+
+  PASS  a valid timetable passes                                    
+  PASS  teacher double-booking caught                               
+  PASS  room double-booking caught                                  
+  PASS  student clash caught                                        
+  PASS  timetable is valid again after undoing the clash            
+  PASS  denormalised day_number drift caught                        
+  PASS  unqualified teacher caught                                  
+  PASS  over-capacity room caught                                   
+  PASS  a class meeting twice does not double-count against capacity
+  PASS  unavailable teacher caught                                  
+  PASS  empty timetable caught                                      
+  PASS  fixture cleaned up - 0 left                                 
+
+All 12 checks passed.

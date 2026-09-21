@@ -1,0 +1,24 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">That change could not be made</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, the change you asked for on <strong>{{ timetable_name }}</strong> was not applied.
+</p>
+
+{{ m.panel([("You asked", request_text)]) }}
+
+{{ m.alert(rejection_reason, "danger") }}
+
+<p style="margin:0 0 14px">
+  Nothing has changed on your timetable, and you have not been charged - asking is always free. Try describing it differently, or naming the class, teacher or room exactly as it appears.
+</p>
+
+<p style="margin:0">
+  If it should have worked, <a href="{{ support_url }}" style="color:#6366F1">let us know</a>.
+</p>
+
+
+{% endblock %}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit timetable - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .examples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .examples button { font-size: 12px; padding: 4px 10px; border-radius: 999px;
+                       border: 1px solid var(--border); background: var(--surface-2);
+                       color: var(--slate); cursor: pointer; }
+    .examples button:hover { border-color: var(--accent); }
+    .verdict { padding: 12px 14px; border-radius: var(--radius-md);
+               margin-top: 14px; }
+    .change { display: grid; grid-template-columns: 1fr 28px 1fr;
+              gap: 10px; align-items: center; padding: 12px;
+              border: 1px solid var(--border); border-radius: var(--radius-md);
+              margin-top: 10px; }
+    .change .arrow { text-align: center; color: var(--slate); font-size: 18px; }
+    .side { font-size: 13px; }
+    .side .head { font-weight: 600; }
+    .side.after { color: var(--text-success, #1a7f4b); }
+    .thinking { display: flex; align-items: center; gap: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:820px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Editing</span>
+    <h1 style="margin-bottom:4px">Request a change</h1>
+    <p class="muted" id="subtitle"></p>
+
+    <div class="card">
+      <div class="field">
+        <label for="request">What would you like changed?</label>
+        <textarea id="request" rows="3" maxlength="500"
+                  placeholder="Move 11COM1 out of Period 3 on Day 4"></textarea>
+      </div>
+      <div class="examples" id="examples"></div>
+
+      <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+        <button class="btn btn-primary" id="ask" type="button">
+          Check this change
+        </button>
+        <a class="btn" id="back" href="timetables.html">Back to versions</a>
+        <span class="thinking small muted" id="thinking" hidden>
+          Working out what you mean...
+        </span>
+      </div>
+      <p class="small muted" style="margin:12px 0 0">
+        Checking a change is free. You are only charged
+        <span id="cost">-</span> credits if you apply it.
+      </p>
+    </div>
+
+    <!-- Proposal ------------------------------------------------------- -->
+    <div class="card" id="proposal" hidden style="margin-top:16px">
+      <h3 style="margin-top:0">What this would do</h3>
+      <p id="interpretation"></p>
+
+      <div id="verdict" class="verdict"></div>
+      <div id="changes"></div>
+
+      <div style="display:flex;gap:10px;margin-top:18px" id="proposal-actions">
+        <button class="btn btn-primary" id="apply" type="button">
+          Apply this change
+        </button>
+        <button class="btn" id="reject" type="button">Discard</button>
+      </div>
+    </div>
+
+    <!-- History -------------------------------------------------------- -->
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">Previous requests</h3>
+      <div id="history"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/edit.js"></script>
+
+</body>
+</html>

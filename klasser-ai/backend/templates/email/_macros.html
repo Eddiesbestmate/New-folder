@@ -1,0 +1,42 @@
+{# Shared pieces, so twenty-four templates do not each invent a button. #}
+
+{% macro button(url, label) %}
+<p style="margin:22px 0">
+  <a href="{{ url }}" style="display:inline-block;background:#6366F1;color:#fff;
+     text-decoration:none;padding:11px 22px;border-radius:6px;font-weight:600;
+     font-size:14px">{{ label }}</a>
+</p>
+{% endmacro %}
+
+{% macro panel(rows) %}
+{# A label/value block. Used for receipts and summaries, where a school wants
+   to scan the numbers rather than read a sentence. #}
+<div style="background:#F7F7FB;border-radius:8px;padding:14px 16px;margin:18px 0">
+  {% for label, value in rows %}
+  <div style="display:block;padding:3px 0;font-size:13px">
+    <span style="color:#6B6B8A">{{ label }}</span>
+    <strong style="float:right;color:#1A1A2E">{{ value }}</strong>
+  </div>
+  {% endfor %}
+  <div style="clear:both"></div>
+</div>
+{% endmacro %}
+
+{% macro alert(text, kind='warning') %}
+{% if kind == 'danger' %}
+<div style="background:#FDECEC;border:1px solid #F5C6C6;color:#C0392B;
+     border-radius:8px;padding:12px 14px;margin:18px 0;font-size:13px">{{ text }}</div>
+{% elif kind == 'success' %}
+<div style="background:#E8F7EF;border:1px solid #B8E6CC;color:#1A6B3C;
+     border-radius:8px;padding:12px 14px;margin:18px 0;font-size:13px">{{ text }}</div>
+{% else %}
+<div style="background:#FFF4E0;border:1px solid #FFD89B;color:#8B5A00;
+     border-radius:8px;padding:12px 14px;margin:18px 0;font-size:13px">{{ text }}</div>
+{% endif %}
+{% endmacro %}
+
+{% macro signoff() %}
+<p style="margin:22px 0 0;color:#6B6B8A;font-size:13px">
+  If you have any questions, just reply to this email.
+</p>
+{% endmacro %}

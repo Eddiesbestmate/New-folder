@@ -1,0 +1,22 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Invoice {{ invoice_number }} is overdue</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, we have not received payment for {{ school_name }}'s invoice.
+</p>
+
+{{ m.panel([("Invoice", invoice_number), ("Original", "$" ~ total_dollars), ("Days overdue", days_overdue), ("Interest so far", "$" ~ interest_accrued_dollars), ("Now owing", "$" ~ total_owed_dollars)]) }}
+
+{{ m.alert("If this is not settled, generating will be blocked from " ~ block_date ~ ".", "danger") }}
+
+{{ m.button(pay_url, "Settle the invoice") }}
+
+<p style="margin:0">
+  If this has already been paid, or there is a problem with the invoice, reply to this email and we will sort it out.
+</p>
+
+
+{% endblock %}

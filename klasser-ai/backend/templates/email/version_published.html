@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Version {{ version_number }} is now live</h1>
+
+<p style="margin:0 0 14px">
+  {{ published_by }} published version {{ version_number }} of <strong>{{ timetable_name }}</strong> at {{ school_name }}.
+</p>
+
+{% if notes %}{{ m.panel([("Notes", notes)]) }}{% endif %}
+
+<p style="margin:0 0 14px">
+  This is now the live timetable. The version it replaced is archived, not deleted - you can roll back to it at any time.
+</p>
+
+{{ m.button(view_url, "Open the timetable") }}
+{% endblock %}

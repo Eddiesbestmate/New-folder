@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Users - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .chip { font-size: 11px; padding: 2px 8px; border-radius: 999px;
+            background: var(--surface-1); color: var(--slate); }
+    .chip.owner { background: var(--bg-accent); color: var(--text-accent); }
+    .chip.off { background: var(--bg-danger); color: var(--text-danger); }
+    .link-box { font-family: ui-monospace, Menlo, Consolas, monospace;
+                font-size: 12px; background: var(--surface-2); padding: 10px;
+                border-radius: var(--radius-md); word-break: break-all;
+                margin-top: 8px; }
+    tr.inactive td { opacity: .55; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:920px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Team</span>
+    <h1 style="margin-bottom:4px">Who can use Klasser</h1>
+    <p class="muted">
+      Owners can invite people, buy credits, generate and publish. Staff can see
+      the timetable and the school's data.
+    </p>
+
+    <!-- Invite ---------------------------------------------------------- -->
+    <div class="card" id="invite-card">
+      <h3 style="margin-top:0">Invite someone</h3>
+      <div id="invite-alert" hidden></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:12px;
+                  align-items:end">
+        <div class="field" style="margin:0">
+          <label for="email">Their email</label>
+          <input id="email" type="email" placeholder="colleague@school.edu.au">
+        </div>
+        <div class="field" style="margin:0">
+          <label for="role">Role</label>
+          <select id="role">
+            <option value="staff">Staff</option>
+            <option value="owner">Owner</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="send" type="button">Send invite</button>
+      </div>
+
+      <div id="invite-result" hidden style="margin-top:14px">
+        <div class="alert alert-success small" id="invite-message"></div>
+        <div class="link-box" id="invite-link"></div>
+        <button class="btn small" id="copy" type="button" style="margin-top:8px">
+          Copy link
+        </button>
+      </div>
+    </div>
+
+    <!-- Pending invites -------------------------------------------------- -->
+    <div class="card" id="pending-card" hidden style="margin-top:16px">
+      <h3 style="margin-top:0">Waiting to be accepted</h3>
+      <div style="overflow-x:auto">
+        <table class="table">
+          <thead>
+            <tr><th>Email</th><th>Role</th><th>Invited by</th>
+                <th>Expires</th><th></th></tr>
+          </thead>
+          <tbody id="invite-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- People ----------------------------------------------------------- -->
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">People</h3>
+      <div style="overflow-x:auto">
+        <table class="table">
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>Role</th>
+                <th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="user-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/users.js"></script>
+
+</body>
+</html>

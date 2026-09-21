@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Your credit balance is getting low</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, {{ school_name }} is running low on credits.
+</p>
+
+{{ m.panel([("Balance", current_balance ~ " credits"), ("A generation costs about", estimated_generation_cost ~ " credits"), ("Generations left", generations_remaining)]) }}
+
+{% if generations_remaining == 0 %}{{ m.alert("There are not enough credits for another generation.") }}{% endif %}
+
+{{ m.button(top_up_url, "Top up") }}
+{% endblock %}

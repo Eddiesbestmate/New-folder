@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">You have been invited to {{ school_name }}</h1>
+
+<p style="margin:0 0 14px">
+  {{ invited_by_name }} has invited you to join {{ school_name }} on Klasser as {{ role }}.
+</p>
+
+{{ m.button(accept_url, "Accept the invitation") }}
+
+<p style="margin:0">
+  The link works for {{ expires_days }} days. You will choose your own password when you accept.
+</p>
+
+
+{% endblock %}

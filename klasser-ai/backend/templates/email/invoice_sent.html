@@ -1,0 +1,25 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Invoice {{ invoice_number }}</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, here is the invoice for {{ school_name }} covering {{ period }}.
+</p>
+
+{{ m.panel([("Invoice", invoice_number), ("Period", period), ("Credits used", subtotal_credits), ("Total", "$" ~ total_dollars), ("Due", due_date)]) }}
+
+<p style="margin:0 0 6px;font-weight:600">What this covers</p>
+<div style="border:1px solid #E4E4EF;border-radius:8px;overflow:hidden;margin-bottom:18px">
+{% for item in line_items %}
+  <div style="padding:10px 14px;font-size:13px;border-bottom:1px solid #F0F0F6">
+    {{ item.description }}
+    <span style="float:right;color:#6B6B8A">{{ item.credits_used }} cr &middot; ${{ item.amount_dollars }}</span>
+  </div>
+{% endfor %}
+  <div style="clear:both"></div>
+</div>
+
+{{ m.button(pay_url, "View and pay") }}
+{% endblock %}

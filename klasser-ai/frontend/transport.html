@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transport - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .chain { border: 1px solid var(--border); border-radius: var(--radius-md);
+             padding: 12px; margin-bottom: 10px; background: var(--surface-2); }
+    .leg { display: grid; grid-template-columns: 60px 1fr 90px;
+           gap: 10px; align-items: center; padding: 5px 0;
+           border-bottom: 1px solid var(--surface-1); font-size: 12px; }
+    .leg:last-child { border-bottom: none; }
+    .leg .time { font-weight: 600; color: var(--slate); }
+    .leg.empty { opacity: .62; font-style: italic; }
+    .pill { font-size: 10px; padding: 2px 7px; border-radius: 999px;
+            background: var(--surface-1); color: var(--slate); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1050px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Transport</span>
+    <h1>Buses and routes</h1>
+    <p class="muted" id="intro"></p>
+
+    <div id="not-applicable" hidden class="alert alert-info">
+      This school has one campus, so no student ever needs to travel between
+      sites. Add a second campus in setup if that changes.
+    </div>
+
+    <div id="main" hidden>
+      <div id="readiness" class="small" style="margin-bottom:16px"></div>
+
+      <div class="feature-grid" id="stats" style="margin-bottom:18px"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="fleet">Fleet</button>
+        <button class="tab" data-tab="routes">Routes</button>
+        <button class="tab" data-tab="schedule">Schedule</button>
+      </div>
+
+      <!-- Fleet -------------------------------------------------------- -->
+      <div class="card" id="panel-fleet" style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Bus fleet</h3>
+          <button class="btn btn-primary" id="add-bus" type="button">Add bus</button>
+        </div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table class="table">
+            <thead>
+              <tr><th>Name</th><th>Capacity</th><th>Home campus</th><th></th></tr>
+            </thead>
+            <tbody id="bus-rows"></tbody>
+          </table>
+        </div>
+        <p class="muted small" id="no-buses" hidden style="margin:12px 0 0">
+          No buses yet. The solver cannot move anyone between campuses without one.
+        </p>
+      </div>
+
+      <!-- Routes ------------------------------------------------------- -->
+      <div class="card" id="panel-routes" hidden style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Routes</h3>
+          <button class="btn btn-primary" id="add-route" type="button">Add route</button>
+        </div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table class="table">
+            <thead>
+              <tr><th>From</th><th>To</th><th>Travel time</th><th></th></tr>
+            </thead>
+            <tbody id="route-rows"></tbody>
+          </table>
+        </div>
+        <p class="muted small" id="no-routes" hidden style="margin:12px 0 0">
+          No routes yet.
+        </p>
+      </div>
+
+      <!-- Schedule ----------------------------------------------------- -->
+      <div class="card" id="panel-schedule" hidden style="margin-top:16px">
+        <div class="picker" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="version" style="max-width:340px"></select>
+          <select id="day" style="max-width:140px"></select>
+          <span class="muted small" id="schedule-stats"></span>
+        </div>
+        <div id="chains" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bus dialog -->
+<dialog id="bus-dialog">
+  <form id="bus-form">
+    <h2 id="bus-title" style="margin-bottom:14px">Add bus</h2>
+    <div id="bus-alert" hidden></div>
+    <div class="field">
+      <label for="bus-name">Name</label>
+      <input id="bus-name" maxlength="100" placeholder="Bus 1">
+    </div>
+    <div class="field">
+      <label for="bus-capacity">Capacity</label>
+      <input id="bus-capacity" type="number" min="1" max="200" value="45">
+    </div>
+    <div class="field">
+      <label for="bus-campus">Home campus</label>
+      <select id="bus-campus"></select>
+      <div class="hint">Where the bus starts and ends its day.</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn" id="bus-cancel" type="button">Cancel</button>
+      <button class="btn" id="bus-delete" type="button"
+              style="margin-left:auto;color:var(--text-danger)">Delete</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Route dialog -->
+<dialog id="route-dialog">
+  <form id="route-form">
+    <h2 id="route-title" style="margin-bottom:14px">Add route</h2>
+    <div id="route-alert" hidden></div>
+    <div class="field">
+      <label for="route-from">From</label>
+      <select id="route-from"></select>
+    </div>
+    <div class="field">
+      <label for="route-to">To</label>
+      <select id="route-to"></select>
+    </div>
+    <div class="field">
+      <label for="route-minutes">Travel time (minutes)</label>
+      <input id="route-minutes" type="number" min="1" max="600" value="12">
+    </div>
+    <div class="field" id="both-ways-field"
+         style="display:flex;gap:8px;align-items:center">
+      <input type="checkbox" id="both-ways" checked style="width:auto">
+      <label for="both-ways" style="margin:0">Also create the return route</label>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn" id="route-cancel" type="button">Cancel</button>
+      <button class="btn" id="route-delete" type="button"
+              style="margin-left:auto;color:var(--text-danger)">Delete</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/transport.js"></script>
+
+</body>
+</html>

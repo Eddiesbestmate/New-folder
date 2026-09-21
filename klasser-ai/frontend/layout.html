@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timetable layout - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1100px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Setup</span>
+    <h1>Timetable layout</h1>
+    <p class="muted">
+      Define the teaching cycle: how many days it runs for, and what happens in
+      each period of each day. Times are local school time.
+    </p>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="field-row">
+        <div class="field">
+          <label for="name">Layout name</label>
+          <input id="name" maxlength="120" placeholder="Standard 5-day cycle">
+        </div>
+        <div class="field">
+          <label for="days">Days in cycle</label>
+          <input id="days" type="number" min="1" max="20" value="5">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn" id="apply-days" type="button">Apply day count</button>
+        <button class="btn" id="copy-day1" type="button">Copy Day 1 to all days</button>
+        <span class="muted small" id="summary"></span>
+      </div>
+    </div>
+
+    <div id="days-container"></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" id="save" type="button">Save layout</button>
+      <a class="btn" href="data.html">Back to school data</a>
+    </div>
+    <p class="muted small" style="margin-top:12px">
+      A layout already used by a timetable is never rewritten. Saving creates a
+      new version and keeps the old one, so existing timetables stay intact.
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/layout.js"></script>
+
+</body>
+</html>

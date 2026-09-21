@@ -1,0 +1,22 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Your timetable is ready</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, <strong>{{ timetable_name }}</strong> has finished generating for {{ school_name }}.
+</p>
+
+{{ m.panel([("Classes formed", classes_formed), ("Teachers assigned", teachers_assigned), ("Time taken", time_taken), ("Attempts", attempt_count), ("Credits used", credits_actual)]) }}
+
+{% if credits_refunded %}{{ m.alert(credits_refunded ~ " credits were refunded - some retries were our fault, and you are not charged for those.", "success") }}{% endif %}
+
+{{ m.button(view_url, "Open the timetable") }}
+
+<p style="margin:0">
+  It is a draft until you publish it. Look through it by class, teacher, room or student first - and if something needs changing, you can ask for it in plain English.
+</p>
+
+
+{% endblock %}

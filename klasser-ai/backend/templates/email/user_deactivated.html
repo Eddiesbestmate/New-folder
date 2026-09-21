@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">An account has been deactivated</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ owner_first_name }}, <strong>{{ user_name }}</strong> ({{ user_email }}) was deactivated at {{ school_name }} on {{ deactivated_at }}.
+</p>
+
+<p style="margin:0 0 14px">
+  They lost access immediately. Nothing they created has been removed, and you can turn the account back on at any time.
+</p>
+
+{{ m.signoff() }}
+{% endblock %}

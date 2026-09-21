@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support queue - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .queue { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px;
+             align-items: start; }
+    @media (max-width: 900px) { .queue { grid-template-columns: 1fr; } }
+    .row { padding: 10px 12px; border: 1px solid var(--border);
+           border-radius: var(--radius-md); margin-bottom: 8px; cursor: pointer; }
+    .row:hover { border-color: var(--accent); }
+    .row.active { border-color: var(--accent); background: var(--surface-2); }
+    .row .subject { font-weight: 600; font-size: 13px; }
+    .chip { font-size: 10px; padding: 2px 7px; border-radius: 999px;
+            background: var(--surface-1); color: var(--slate); }
+    .chip.urgent { background: var(--bg-danger); color: var(--text-danger); }
+    .chip.high { background: var(--bg-warning); color: var(--text-warning); }
+    .log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px;
+           max-height: 260px; overflow: auto; background: var(--surface-2);
+           border-radius: var(--radius-md); padding: 10px; }
+    .stat { display: inline-block; margin-right: 16px; }
+    .stat b { font-size: 20px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1150px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Dev portal</span>
+    <h1 style="margin-bottom:4px">Support queue</h1>
+    <div class="small muted" id="totals" style="margin-bottom:14px"></div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+        <div class="field" style="margin:0">
+          <label for="f-status">Status</label>
+          <select id="f-status">
+            <option value="">All</option>
+            <option value="open" selected>Open</option>
+            <option value="in_progress">In progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="f-priority">Priority</label>
+          <select id="f-priority">
+            <option value="">All</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="normal">Normal</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label for="f-category">Category</label>
+          <select id="f-category">
+            <option value="">All</option>
+            <option value="billing">Billing</option>
+            <option value="generation">Generation</option>
+            <option value="data">Data</option>
+            <option value="account">Account</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <button class="btn" id="refresh" type="button">Refresh</button>
+      </div>
+    </div>
+
+    <div class="queue">
+      <div id="rows"></div>
+
+      <div class="card" id="detail" hidden>
+        <h3 style="margin-top:0" id="d-subject"></h3>
+        <div class="small muted" id="d-meta"></div>
+        <p style="white-space:pre-wrap" id="d-body"></p>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+          <div class="field" style="margin:0">
+            <label for="d-status">Status</label>
+            <select id="d-status">
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0">
+            <label for="d-priority">Priority</label>
+            <select id="d-priority">
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="d-notes">Internal notes (never shown to the school)</label>
+          <textarea id="d-notes" rows="3" maxlength="5000"></textarea>
+        </div>
+        <button class="btn btn-primary" id="save" type="button">Save</button>
+
+        <div id="d-log-wrap" hidden style="margin-top:16px">
+          <h3>Pipeline log</h3>
+          <div class="log" id="d-log"></div>
+        </div>
+        <div id="d-err-wrap" hidden style="margin-top:14px">
+          <h3>Errors</h3>
+          <div class="log" id="d-errors"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dev-support.js"></script>
+
+</body>
+</html>

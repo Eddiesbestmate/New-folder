@@ -1,0 +1,14 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">Payment receipt</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, your card has been charged for a generation at {{ school_name }}.
+</p>
+
+{{ m.panel([("Timetable", timetable_name), ("Credits used", credits_used), ("Charged", "$" ~ amount_charged_dollars), ("Card", card_brand ~ " ending " ~ card_last_four), ("Reference", fake_payment_id)]) }}
+
+{{ m.button(billing_url, "View your billing") }}
+{% endblock %}

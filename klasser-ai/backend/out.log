@@ -1,0 +1,59 @@
+﻿
+Phase 8 - progress and output
+
+  PASS  GET estimate - HTTP 200                           
+  PASS  nine cost lines - 9                               
+  PASS  a total is calculated - 190                       
+  PASS  base fee from settings - 60.0                     
+  PASS  student cost matches roll - 9.6                   
+  PASS  transport charged for the two-campus school - 40.0
+  PASS  billing mode reported                             
+  PASS  cannot afford with a zero balance - 0             
+  PASS  timetable generated - 54 entries                  
+  PASS  GET timetables - HTTP 200                         
+  PASS  generated timetable is listed                     
+  PASS  version count reported - 1                        
+  PASS  latest version id returned                        
+  PASS  GET versions - 1 versions                         
+  PASS  version entry count matches                       
+  PASS  GET summary - HTTP 200                            
+  PASS  new version is a draft                            
+  PASS  summary entry count matches                       
+  PASS  student count reported - 48                       
+  PASS  five days in the cycle - 5                        
+  PASS  teaching periods listed - 5                       
+  PASS  options for class - 21 items                      
+  PASS  grid for class - HTTP 200                         
+  PASS  class grid has entries - 2                        
+  PASS  class cells keyed day-period - []                 
+  PASS  options for teacher - 14 items                    
+  PASS  grid for teacher - HTTP 200                       
+  PASS  teacher grid has entries - 3                      
+  PASS  teacher cells keyed day-period - []               
+  PASS  options for room - 6 items                        
+  PASS  grid for room - HTTP 200                          
+  PASS  room grid has entries - 10                        
+  PASS  room cells keyed day-period - []                  
+  PASS  options for student - 48 items                    
+  PASS  grid for student - HTTP 200                       
+  PASS  student grid has entries - 13                     
+  PASS  student cells keyed day-period - []               
+  PASS  every teacher grid has one class per slot         
+  PASS  unknown view rejected - got 422                   
+  PASS  missing key rejected - got 422                    
+  PASS  GET transport - HTTP 200                          
+  PASS  GET duties - 50 assignments                       
+  PASS  publish version - HTTP 200                        
+  PASS  version is published - published                  
+  PASS  publisher recorded                                
+  PASS  publish a second version                          
+  PASS  previous version archived - archived              
+  PASS  exactly one published version - 1                 
+  PASS  staff cannot publish - got 403                    
+  PASS  staff can still read output                       
+  PASS  another school gets 404 on summary - got 404      
+  PASS  another school gets 404 on versions - got 404     
+  PASS  another school cannot publish - got 404           
+  PASS  test data cleaned up - 0 left                     
+
+All 54 checks passed.

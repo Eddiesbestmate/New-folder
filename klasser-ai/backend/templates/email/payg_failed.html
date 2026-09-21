@@ -1,0 +1,22 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">We could not take payment</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, the card on file for {{ school_name }} was declined.
+</p>
+
+{{ m.panel([("Amount", "$" ~ amount_dollars), ("Card", card_brand ~ " ending " ~ card_last_four)]) }}
+
+{{ m.alert("Your timetable is finished and still yours - nothing has been taken away. But new generations are paused until this is settled, and the balance accrues " ~ interest_rate_daily_pct ~ "% interest a day.", "danger") }}
+
+{{ m.button(update_payment_url, "Update payment method") }}
+
+<p style="margin:0">
+  You can also <a href="{{ outstanding_url }}" style="color:#6366F1">see what is owed</a> in full.
+</p>
+
+
+{% endblock %}

@@ -1,0 +1,8 @@
+﻿.\venv\Scripts\python.exe : DATABASE_SSL=disable - connecting to Postgres WITHOUT TLS. The password and all data cross 
+the network in cleartext. Local development only; never deploy with this set.
+At line:1 char:365
++ ... i\backend"; .\venv\Scripts\python.exe test_deterministic.py > det.log ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (DATABASE_SSL=di... with this set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

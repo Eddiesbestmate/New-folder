@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Klasser AI - Timetabling, handled.</title>
+  <meta name="description" content="AI-powered school timetabling with built-in
+        validation, cross-campus transport scheduling and plain-English editing.
+        Built for Australian secondary schools.">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <span class="logo logo-light">Klass<span class="er">er</span></span>
+  <div class="nav-actions">
+    <a class="btn" href="#pricing">Pricing</a>
+    <a class="btn" href="login.html">Log in</a>
+    <a class="btn btn-primary" href="signup.html">Get started</a>
+  </div>
+</nav>
+
+<!-- Hero ------------------------------------------------------------------ -->
+<header class="hero">
+  <h1>Timetabling, handled.</h1>
+  <p class="lede">
+    Klasser builds the whole thing &mdash; classes, teachers, rooms, duties and
+    cross-campus buses &mdash; then checks it against every rule before you ever
+    see it.
+  </p>
+  <div class="hero-actions">
+    <a class="btn" href="signup.html">Get started</a>
+    <a class="btn btn-ghost" href="#how">See how it works</a>
+  </div>
+  <p class="hero-note">
+    Every new school gets a free run on sample data. No card, no setup.
+  </p>
+
+  <!-- Every figure here is something the product actually does, not a
+       projection. Kept that way deliberately: a number on this page that
+       turns out to be aspirational is the fastest way to lose a school. -->
+  <div class="stat-strip">
+    <div><b>11</b><span>generation stages</span></div>
+    <div><b>4</b><span>AI validators, plus a deterministic checker</span></div>
+    <div><b>$0</b><span>charged for a failed run</span></div>
+    <div><b>1</b><span>free run on sample data</span></div>
+  </div>
+</header>
+
+<!-- The problem ----------------------------------------------------------- -->
+<section class="section">
+  <div class="section-inner">
+    <span class="eyebrow">The problem</span>
+    <h2>Timetabling eats weeks of the wrong person's year</h2>
+    <p class="muted" style="max-width:640px">
+      It usually lands on a deputy principal &mdash; the person whose time is
+      worth the most and who has the least of it. Weeks of evenings spent
+      shuffling a spreadsheet, and the result still has clashes nobody spots
+      until week one.
+    </p>
+
+    <div class="who-grid">
+      <div class="who-card">
+        <span class="role">Deputy principal</span>
+        <p>Gets the timetable off their desk. Describes a change in a sentence
+          instead of rebuilding a grid to make it.</p>
+      </div>
+      <div class="who-card">
+        <span class="role">Business manager</span>
+        <p>Sees what a run will cost before it starts, and never pays for a
+          generation that failed.</p>
+      </div>
+      <div class="who-card">
+        <span class="role">Multi-campus schools</span>
+        <p>Buses are solved with the timetable, not bolted on afterwards by
+          somebody with a whiteboard.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -------------------------------------------------------------- -->
+<section class="section">
+  <div class="section-inner">
+    <span class="eyebrow">What it does</span>
+    <h2>Built for the way schools actually timetable</h2>
+    <div class="feature-grid">
+      <div class="card">
+        <h3>Layered AI generation</h3>
+        <p class="muted">Eleven stages form class groups, then assign periods,
+          rooms, teachers, duties and transport &mdash; with deterministic
+          checks between every layer, so a bad step is caught before the next
+          one builds on it.</p>
+      </div>
+      <div class="card">
+        <h3>Validated before you see it</h3>
+        <p class="muted">A deterministic checker enforces every hard rule, and
+          four AI validators review the result independently. Any single
+          failure sends it back. The checker can never be overruled.</p>
+      </div>
+      <div class="card">
+        <h3>Cross-campus transport</h3>
+        <p class="muted">Bus demand, routes, capacity and empty repositioning
+          legs are solved alongside the timetable. Departure times work
+          backwards from the bell.</p>
+      </div>
+      <div class="card">
+        <h3>Import what you already have</h3>
+        <p class="muted">Upload a spreadsheet and the importer works out which
+          column is which, then shows you the mapping before anything is
+          saved.</p>
+      </div>
+      <div class="card">
+        <h3>Edit in plain English</h3>
+        <p class="muted">"Move 11COM1 out of Period 3 on Day 4." The change is
+          checked against every rule and shown as a before-and-after diff.
+          Asking is free; you only pay if you apply it.</p>
+      </div>
+      <div class="card">
+        <h3>Export to your SIS</h3>
+        <p class="muted">Paste the header row your system expects &mdash;
+          Sentral, Compass, SEQTA &mdash; and Klasser maps it once. Every
+          export after that is instant.</p>
+      </div>
+      <div class="card">
+        <h3>Versions and rollback</h3>
+        <p class="muted">Every generation is a version. Compare any two side by
+          side, publish the one you want, and roll back to an earlier one
+          without losing either.</p>
+      </div>
+      <div class="card">
+        <h3>Nothing is charged twice</h3>
+        <p class="muted">Credits are held when a run starts and settled when it
+          finishes. A generation that fails costs nothing, whoever's fault it
+          was.</p>
+      </div>
+      <div class="card">
+        <h3>Your data stays yours</h3>
+        <p class="muted">Every table is isolated per school at the database
+          level, not just in application code &mdash; so a mistake in an API
+          call still cannot cross between schools.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works ---------------------------------------------------------- -->
+<section class="section" id="how">
+  <div class="section-inner">
+    <span class="eyebrow">How it works</span>
+    <h2>Set up once, then generate whenever you need to</h2>
+
+    <div class="steps">
+      <div class="step">
+        <span class="num"></span>
+        <div>
+          <h3>Tell it about your school</h3>
+          <p>Campuses, your cycle and period structure, rooms, and the duties
+            that need covering. A guided setup, once.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num"></span>
+        <div>
+          <h3>Import teachers and students</h3>
+          <p>Upload the spreadsheets you already keep. Klasser reads the
+            columns, shows you what it found, and only writes once you
+            confirm.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num"></span>
+        <div>
+          <h3>Generate</h3>
+          <p>You see the cost before you commit, then watch each layer complete
+            live. If a run fails on its own terms it retries itself, and you
+            are not charged for the attempt.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num"></span>
+        <div>
+          <h3>Review, adjust, publish</h3>
+          <p>Look at it by class, teacher, room or student. Ask for changes in
+            plain English. Publish when you are happy &mdash; and roll back if
+            you change your mind.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num"></span>
+        <div>
+          <h3>Export into your systems</h3>
+          <p>Send it to your SIS in the exact CSV format it expects, with the
+            transport schedule and duty roster alongside.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing --------------------------------------------------------------- -->
+<section class="section" id="pricing">
+  <div class="section-inner">
+    <span class="eyebrow">Pricing</span>
+    <h2>Buy credits, spend them when you generate</h2>
+    <p class="muted" style="max-width:640px">
+      A generation costs credits based on the size and complexity of your
+      school &mdash; students, teachers, campuses, transport and duties. You see
+      the exact number before a run starts, and a failed run is never charged.
+    </p>
+
+    <div class="price-grid">
+      <div class="price">
+        <span class="tag">Once per school</span>
+        <span class="tier">Trial</span>
+        <span class="amount">$480</span>
+        <span class="per">300 credits &middot; $1.60 each</span>
+        <ul>
+          <li>Around two runs for a mid-sized school</li>
+          <li>Expires after 12 months</li>
+        </ul>
+      </div>
+
+      <div class="price featured">
+        <span class="tag">Most schools start here</span>
+        <span class="tier">Standard</span>
+        <span class="amount">$1,600</span>
+        <span class="per">800 credits &middot; $2.00 each</span>
+        <ul>
+          <li>A full year for most secondary schools</li>
+          <li>Credits do not expire</li>
+        </ul>
+      </div>
+
+      <div class="price">
+        <span class="tier">Annual</span>
+        <span class="amount">$2,850</span>
+        <span class="per">1,500 credits &middot; $1.90 each</span>
+        <ul>
+          <li>Room to regenerate each term</li>
+          <li>Credits do not expire</li>
+        </ul>
+      </div>
+
+      <div class="price">
+        <span class="tier">Ultra</span>
+        <span class="amount">$5,400</span>
+        <span class="per">3,000 credits &middot; $1.80 each</span>
+        <ul>
+          <li>Large or multi-campus schools</li>
+          <li>Credits do not expire</li>
+        </ul>
+      </div>
+
+      <div class="price">
+        <span class="tier">Enterprise</span>
+        <span class="amount">$12,800</span>
+        <span class="per">8,000 credits &middot; $1.60 each</span>
+        <ul>
+          <li>Networks and very large schools</li>
+          <li>Best rate per credit</li>
+        </ul>
+      </div>
+
+      <div class="price">
+        <span class="tier">Pay as you go</span>
+        <span class="amount">$2.30</span>
+        <span class="per">per credit, charged after each run</span>
+        <ul>
+          <li>No balance to keep topped up</li>
+          <li>Or ask about monthly invoicing</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="muted small" style="margin-top:20px">
+      A 700-student school on a single campus is roughly 200 credits a run.
+      A 1,500-student school across three campuses with transport is roughly
+      600.
+    </p>
+  </div>
+</section>
+
+<!-- FAQ ------------------------------------------------------------------- -->
+<section class="section">
+  <div class="section-inner">
+    <span class="eyebrow">Questions</span>
+    <h2>The things schools ask first</h2>
+
+    <div class="faq">
+      <details open>
+        <summary>What if the timetable it produces is wrong?</summary>
+        <p>It does not reach you. Every hard rule &mdash; teacher and room
+          double-bookings, student clashes, room capacity, teacher
+          qualifications and availability &mdash; is checked by deterministic
+          code, not by the AI. Four AI validators then review the result
+          separately, and any one of them failing sends the run back to the
+          layer responsible. The deterministic checker can never be
+          overruled.</p>
+      </details>
+
+      <details>
+        <summary>Do I pay for a run that fails?</summary>
+        <p>No. Credits are held when a run starts and only settled when a
+          timetable is actually produced. If it fails, the hold is released and
+          the reason recorded &mdash; whoever's fault it was.</p>
+      </details>
+
+      <details>
+        <summary>Can I change the timetable after it is generated?</summary>
+        <p>Yes, in plain English. Describe the change and Klasser shows you what
+          it would do, checked against every rule, as a before-and-after diff.
+          Asking costs nothing; you are only charged if you apply it. Your
+          published timetable is never edited in place &mdash; changes go into a
+          new version you choose to publish.</p>
+      </details>
+
+      <details>
+        <summary>We have two campuses and students who move between them.</summary>
+        <p>That is solved as part of the timetable rather than afterwards.
+          Klasser works out who needs to travel and when, assigns buses within
+          their capacity, and schedules the empty repositioning legs too.
+          Departure times are calculated backwards from the bell using your
+          real travel times.</p>
+      </details>
+
+      <details>
+        <summary>Will it work with our existing systems?</summary>
+        <p>Import takes the spreadsheets you already keep. For export, paste the
+          header row your system expects and Klasser maps it to the right fields
+          once &mdash; after that, every export is instant and in exactly that
+          format.</p>
+      </details>
+
+      <details>
+        <summary>Is our data kept separate from other schools?</summary>
+        <p>Yes, and enforced in the database rather than only in application
+          code. Every table carrying school data has row-level security, so a
+          query can only ever return your own school's rows &mdash; a mistake in
+          an API call cannot leak across schools.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA ------------------------------------------------------------------- -->
+<section class="section">
+  <div class="section-inner center">
+    <span class="eyebrow">Get started</span>
+    <h2>Try it on a real school before you use yours</h2>
+    <p class="muted" style="max-width:520px;margin:0 auto 22px">
+      Every new account gets a free run against a fully populated sample school
+      &mdash; two campuses, 48 students, buses and duties. No credits, no setup,
+      nothing to configure.
+    </p>
+    <a class="btn btn-primary" href="signup.html">Create an account</a>
+  </div>
+</section>
+
+<!-- Footer ---------------------------------------------------------------- -->
+<footer class="footer">
+  <div class="section-inner">
+    <div class="footer-grid">
+      <div>
+        <h4>Product</h4>
+        <a href="#how">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="signup.html">Get started</a>
+      </div>
+      <div>
+        <h4>Account</h4>
+        <a href="login.html">Log in</a>
+        <a href="signup.html">Create an account</a>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <a href="mailto:support@klasser.ai">support@klasser.ai</a>
+        <a href="mailto:billing@klasser.ai">billing@klasser.ai</a>
+      </div>
+      <div>
+        <h4>Klasser</h4>
+        <p style="margin:0;line-height:1.7">
+          AI-powered timetabling for Australian secondary schools.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; 2026 Klasser &middot; Timetabling, handled.</span>
+      <span>Built in Victoria, Australia</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

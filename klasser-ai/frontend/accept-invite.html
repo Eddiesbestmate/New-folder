@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Join your school - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+</div>
+
+<div class="page" style="max-width:460px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Checking your invite...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Invitation</span>
+    <h1 style="margin-bottom:4px" id="heading"></h1>
+    <p class="muted" id="subtitle"></p>
+
+    <div class="card">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" disabled>
+        <p class="small muted" style="margin:4px 0 0">
+          This is the address your invite was sent to.
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label for="first-name">First name</label>
+          <input id="first-name" maxlength="100" autocomplete="given-name">
+        </div>
+        <div class="field">
+          <label for="surname">Surname</label>
+          <input id="surname" maxlength="100" autocomplete="family-name">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="password">Choose a password</label>
+        <input id="password" type="password" autocomplete="new-password"
+               minlength="8" maxlength="200">
+        <p class="small muted" style="margin:4px 0 0">
+          At least 8 characters, with a letter and a number.
+        </p>
+      </div>
+
+      <button class="btn btn-primary" id="join" type="button"
+              style="width:100%;margin-top:6px">
+        Join
+      </button>
+    </div>
+
+    <p class="small muted" style="text-align:center">
+      Already set up? <a href="login.html">Log in instead</a>.
+    </p>
+  </div>
+
+  <!-- Shown when the token is no good ---------------------------------- -->
+  <div id="dead" hidden>
+    <div class="card">
+      <h2 style="margin-top:0">This link has expired</h2>
+      <p class="muted" id="dead-detail"></p>
+      <a class="btn" href="index.html">Back to Klasser</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/accept-invite.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+﻿.\venv\Scripts\python.exe : DATABASE_SSL=disable - connecting to Postgres WITHOUT TLS. The password and all data cross 
+the network in cleartext. Local development only; never deploy with this set.
+At line:1 char:365
++ ... i\backend"; .\venv\Scripts\python.exe measure_tokens.py --synthetic 7 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (DATABASE_SSL=di... with this set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Traceback (most recent call last):
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\measure_tokens.py", line 368, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\algielu\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 194, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\algielu\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\algielu\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 721, in 
+run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\measure_tokens.py", line 360, in main
+    await db.execute(
+        "DELETE FROM generation_attempts WHERE timetable_id = $1", timetable_id)
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\models\database.py", line 136, in execute
+    return await require_pool().execute(query, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\venv\Lib\site-packages\asyncpg\pool.py", line 592, in 
+execute
+    return await con.execute(query, *args, timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\venv\Lib\site-packages\asyncpg\connection.py", line 
+357, in execute
+    _, status, _ = await self._execute(
+                   ^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\venv\Lib\site-packages\asyncpg\connection.py", line 
+1873, in _execute
+    result, _ = await self.__execute(
+                ^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    )
+    ^
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\venv\Lib\site-packages\asyncpg\connection.py", line 
+1970, in __execute
+    result, stmt = await self._do_execute(
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "C:\Users\algielu\Downloads\New folder\klasser-ai\backend\venv\Lib\site-packages\asyncpg\connection.py", line 
+2036, in _do_execute
+    result = await executor(stmt, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "asyncpg/protocol/protocol.pyx", line 205, in bind_execute
+asyncpg.exceptions.ForeignKeyViolationError: update or delete on table "generation_attempts" violates foreign key 
+constraint "validation_results_attempt_id_fkey" on table "validation_results"
+DETAIL:  Key (id)=(93ee3ab9-a5e4-4c3d-9476-066d8799974c) is still referenced from table "validation_results".

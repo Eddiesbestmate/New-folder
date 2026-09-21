@@ -1,0 +1,27 @@
+﻿Building: 700 students, 120 teachers, 80 rooms, 2 campuses, 10-day cycle x 7 periods, duties...
+
+School: Token Measurement School  (700 students, 120 teachers, 3500 enrolments)
+
+TASK                             MODEL           CALLS   IN TOKENS
+task_block_campus_primary        magistral           2      15,572
+task_class_group_formation       magistral          60      89,518
+task_interpret                   gemini              1         468
+task_teacher_primary             magistral          10      15,851
+validator_1                      gemini             10      52,454
+validator_2                      gpt_oss            10      52,454
+validator_3                      groq               10      52,454
+validator_4                      mistral_small      10      52,454
+
+MODEL           CALLS   IN TOKENS
+gemini             11      52,922
+gpt_oss            10      52,454
+groq               10      52,454
+magistral          72     120,941
+mistral_small      10      52,454
+
+Total input tokens for one generation: 331,225
+Output tokens are far smaller - every layer returns ids or index
+lists, not prose. Expect roughly 5-10% of input.
+
+Real per-call usage is logged to pipeline_log.tokens_used once
+generations run against live providers.

@@ -1,0 +1,17 @@
+﻿.\venv\Scripts\python.exe : 11:19:50  WARNING klasser.db  DATABASE_SSL=disable - connecting to Postgres WITHOUT TLS. 
+The password and all data cross the network in cleartext. Local development only; never deploy with this set.
+At line:1 char:365
++ ... i\backend"; .\venv\Scripts\python.exe test_output.py > out.log 2> out ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (11:19:50  WARNI... with this set.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+11:19:50  INFO    klasser.db  Database connected: PostgreSQL 17.6 on x86_64-pc-linux-gnu
+11:19:52  INFO    klasser.auth  School created: Output Test f3779028 (owner output.f3779028@example.com)
+11:20:17  INFO    klasser.timetables  Version 1 of timetable 2e1239d8-5735-43d2-92a4-ba653e150d20 published by 
+output.f3779028@example.com
+11:20:18  INFO    klasser.timetables  Version 2 of timetable 2e1239d8-5735-43d2-92a4-ba653e150d20 published by 
+output.f3779028@example.com
+11:20:20  INFO    klasser.auth  School created: Other Output f3779028 (owner output.other.f3779028@example.com)
+11:20:23  ERROR   klasser.supabase  Failed to delete auth user 85787343-9e3d-4a5c-92f9-555502e02fe9: HTTP 500
+11:20:24  INFO    klasser.db  Database pool closed

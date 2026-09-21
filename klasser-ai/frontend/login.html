@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-head">
+      <a href="index.html" style="text-decoration:none">
+        <span class="logo" style="color:var(--ink)">Klass<span class="er">er</span></span>
+      </a>
+      <h1 style="font-size:22px;margin-top:14px">Log in</h1>
+      <p class="muted small" style="margin:0">Welcome back.</p>
+    </div>
+
+    <div id="alert" hidden></div>
+
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" required
+               placeholder="you@school.edu.au">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button id="submit" class="btn btn-primary btn-block" type="submit">Log in</button>
+    </form>
+
+    <!-- Google and Microsoft buttons go here once the providers are enabled in
+         the Supabase dashboard. loginWithProvider('google' | 'azure') in
+         auth.js already handles them. -->
+
+    <div class="divider">NEW HERE?</div>
+    <a class="btn btn-block" href="signup.html">Create a school account</a>
+
+    <p class="center small muted" style="margin:18px 0 0">
+      <a href="dev-login.html">Team member login</a>
+    </p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const alertBox = document.getElementById('alert');
+  const form = document.getElementById('form');
+  const submit = document.getElementById('submit');
+
+  redirectIfSignedIn();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert(alertBox);
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      showAlert(alertBox, 'Enter your email and password.');
+      return;
+    }
+
+    submit.disabled = true;
+    submit.textContent = 'Logging in...';
+    try {
+      await loginWithPassword(email, password);
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      showAlert(alertBox, err.message);
+      submit.disabled = false;
+      submit.textContent = 'Log in';
+    }
+  });
+</script>
+
+</body>
+</html>

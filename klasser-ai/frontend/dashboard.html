@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo logo-light">Klass<span class="er">er</span></span>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="alert" hidden></div>
+
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Dashboard</span>
+    <h1 id="school-name"></h1>
+    <p class="muted" id="school-meta"></p>
+
+    <div class="card" style="margin-top:20px">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
+        <div>
+          <h3>Getting set up</h3>
+          <p class="muted small" style="margin:0">
+            Complete these before generating a timetable.
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;flex:0 0 auto;flex-wrap:wrap">
+          <a class="btn" href="data.html">School data</a>
+          <a class="btn" href="timetables.html">Timetables</a>
+          <a class="btn" href="billing.html">Billing</a>
+          <a class="btn" href="support.html">Help</a>
+          <a class="btn btn-primary" id="primary-action" href="onboarding.html">
+            Continue setup
+          </a>
+        </div>
+      </div>
+      <ul class="progress-list" id="progress" style="margin-top:14px"></ul>
+      <p id="ready" class="small" style="margin:14px 0 0"></p>
+    </div>
+
+    <!-- The free sample run -------------------------------------------- -->
+    <div class="card" id="sandbox-card" hidden style="margin-top:16px;
+         border-left:3px solid var(--purple)">
+      <h3 style="margin-top:0" id="sandbox-title">See it work first</h3>
+      <p class="muted small" id="sandbox-detail" style="margin:0 0 12px"></p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" id="sandbox-start" type="button" hidden>
+          Run the sample
+        </button>
+        <a class="btn" id="sandbox-open" href="#" hidden>Open the sample</a>
+        <a class="btn" id="sandbox-watch" href="#" hidden>Watch it run</a>
+        <span class="small muted" id="sandbox-note"></span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin-top:0">Everything else</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="btn small" href="layout.html">Timetable layout</a>
+        <a class="btn small" href="import.html">Import data</a>
+        <a class="btn small" href="transport.html">Transport</a>
+        <a class="btn small" href="export-templates.html">Export templates</a>
+        <a class="btn small" href="users.html">Users</a>
+        <a class="btn small" href="notifications.html">Notifications</a>
+        <a class="btn small" href="support.html">Support</a>
+        <a class="btn small" id="dev-link" href="dev.html" hidden>Dev portal</a>
+        <a class="btn small" id="dev-support-link" href="dev-support.html" hidden>
+          Support queue
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  const alertBox = document.getElementById('alert');
+
+  document.getElementById('logout').addEventListener('click', logout);
+
+  (async () => {
+    const me = await requireLogin();
+    if (!me) return;
+
+    document.getElementById('who').textContent =
+      `${me.first_name} ${me.surname} - ${me.role}`;
+    document.getElementById('dev-link').hidden = me.role !== 'dev';
+    document.getElementById('dev-support-link').hidden = me.role !== 'dev';
+    document.getElementById('school-name').textContent = me.school_name;
+    document.getElementById('school-meta').textContent =
+      `${me.timezone} - signed in as ${me.email}`;
+
+    /* Progress comes from the backend, which derives each step from the actual
+     * data rather than from a stored flag. */
+    const progress = await apiCall('GET', '/onboarding/progress');
+
+    document.getElementById('progress').innerHTML = progress.steps
+      .map((s) => {
+        const count = s.count !== null && s.count !== undefined ? ` (${s.count})` : '';
+        const req = s.required ? '' : ' <span class="muted small">optional</span>';
+        return `
+          <li>
+            <span class="tick ${s.complete ? 'done' : 'pending'}">${s.complete ? '&check;' : '&#9675;'}</span>
+            <span>${s.label}${count}${req}</span>
+          </li>`;
+      })
+      .join('');
+
+    const ready = document.getElementById('ready');
+    if (progress.ready_to_generate) {
+      ready.className = 'alert alert-success small';
+      ready.textContent = 'Ready to generate a timetable.';
+      // Once setup is done, generating is the thing they came here to do.
+      const action = document.getElementById('primary-action');
+      action.href = 'generate.html';
+      action.textContent = 'Generate a timetable';
+    } else {
+      ready.className = 'alert alert-info small';
+      ready.textContent = `Still needed: ${progress.missing.join(', ')}.`;
+    }
+
+    await loadSandbox(me);
+
+    document.getElementById('loading').hidden = true;
+    document.getElementById('content').hidden = false;
+  })().catch((err) => {
+    document.getElementById('loading').hidden = true;
+    showAlert(alertBox, err.message);
+  });
+
+  /* --- The free sample run ------------------------------------------------ */
+
+  async function loadSandbox(me) {
+    let state;
+    try {
+      state = await apiCall('GET', '/onboarding/sandbox');
+    } catch {
+      // Never let the sample block the dashboard - it is an extra, not the page.
+      return;
+    }
+
+    const card = document.getElementById('sandbox-card');
+    const start = document.getElementById('sandbox-start');
+    const open = document.getElementById('sandbox-open');
+    const watch = document.getElementById('sandbox-watch');
+    const detail = document.getElementById('sandbox-detail');
+    const note = document.getElementById('sandbox-note');
+
+    card.hidden = false;
+    start.hidden = open.hidden = watch.hidden = true;
+    note.textContent = '';
+
+    if (state.available) {
+      document.getElementById('sandbox-title').textContent = 'See it work first';
+      detail.textContent =
+        'Run a real generation on our example school - two campuses, 48 '
+        + 'students, buses and duties. It costs nothing and does not touch '
+        + 'your own data. One per school.';
+      start.hidden = me.role !== 'owner';
+      if (me.role !== 'owner') note.textContent = 'Only the owner can start it.';
+      return;
+    }
+
+    document.getElementById('sandbox-title').textContent = 'Your sample timetable';
+
+    if (state.status === 'processing') {
+      detail.textContent = 'Your sample run is going now.';
+      watch.hidden = false;
+      watch.href = `progress.html?timetable=${state.timetable_id}`;
+      return;
+    }
+    if (state.status === 'failed') {
+      detail.textContent =
+        'The sample run did not finish. That is our fault, not yours - '
+        + 'nothing was charged.';
+      return;
+    }
+    if (state.version_id) {
+      detail.textContent =
+        'A real timetable, generated on our example school. You can look '
+        + 'around it, but it is a sample - it cannot be published or exported '
+        + 'as yours.';
+      open.hidden = false;
+      open.href = `output.html?version=${state.version_id}`;
+      return;
+    }
+
+    detail.textContent = 'Your free sample run has been used.';
+  }
+
+  document.getElementById('sandbox-start').addEventListener('click', async () => {
+    const button = document.getElementById('sandbox-start');
+    button.disabled = true;
+    button.textContent = 'Starting...';
+    try {
+      const result = await apiCall('POST', '/onboarding/sandbox');
+      window.location.href = `progress.html?timetable=${result.timetable_id}`;
+    } catch (err) {
+      showAlert(alertBox, err.message);
+      button.disabled = false;
+      button.textContent = 'Run the sample';
+    }
+  });
+</script>
+
+</body>
+</html>

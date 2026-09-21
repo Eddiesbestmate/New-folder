@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notifications - Klasser AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pref { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0;
+            border-bottom: 1px solid var(--surface-1); }
+    .pref:last-child { border-bottom: none; }
+    .pref input { width: auto; margin-top: 3px; flex: 0 0 auto; }
+    .pref .label { font-weight: 500; }
+    .pref .detail { font-size: 12px; color: var(--slate); }
+    .saved { font-size: 12px; color: var(--slate); opacity: 0;
+             transition: opacity .2s; }
+    .saved.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:720px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div>
+        <span class="eyebrow">Notifications</span>
+        <h1 style="margin-bottom:4px">Which emails you get</h1>
+      </div>
+      <span class="saved" id="saved">Saved</span>
+    </div>
+    <p class="muted" id="intro"></p>
+
+    <div style="display:flex;gap:10px;margin:14px 0">
+      <button class="btn small" id="all-on" type="button">Turn all on</button>
+      <button class="btn small" id="all-off" type="button">Turn all off</button>
+    </div>
+
+    <div id="groups"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/notifications.js"></script>
+
+</body>
+</html>

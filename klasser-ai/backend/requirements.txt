@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+asyncpg
+supabase
+python-dotenv
+resend
+jinja2
+cryptography
+openai
+httpx
+apscheduler
+python-multipart
+openpyxl
+pydantic[email]
+truststore
+

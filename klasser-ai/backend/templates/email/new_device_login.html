@@ -1,0 +1,19 @@
+{% extends "_base.html" %}
+{% import "_macros.html" as m %}
+{% block content %}
+
+<h1 style="margin:0 0 14px;font-size:20px">New login to your account</h1>
+
+<p style="margin:0 0 14px">
+  Hi {{ first_name }}, your Klasser account was signed in to from a device we have not seen before.
+</p>
+
+{{ m.panel([("Device", device), ("Location", location), ("When", time)]) }}
+
+<p style="margin:0 0 14px">
+  If that was you, nothing to do.
+</p>
+
+{{ m.alert("If it was not, secure your account now - change your password and tell us.", "danger") }}
+{{ m.button(not_you_url, "This was not me") }}
+{% endblock %}

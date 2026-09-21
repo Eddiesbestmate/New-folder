@@ -68,6 +68,8 @@ def long_date(value) -> str:
 CORS_ORIGINS = [
     "https://klasser.ai",
     "https://www.klasser.ai",
+    "https://klasser-test.netlify.app",
+    "https://claris-hamamelidaceous-persistently.ngrok-free.dev",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5500",

@@ -62,3 +62,6 @@ Thumbs.db
 *.tmp
 *.bak
 *.swp
+
+# Local Netlify folder
+.netlify

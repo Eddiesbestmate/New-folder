@@ -1,8 +1,18 @@
 /* Klasser - school data pages.
  *
- * One table driver for all four entity types. Each type declares its columns,
- * its form fields and how to turn a row into a payload; everything else -
- * loading, searching, the dialog, save and delete - is shared.
+ * One table-and-dialog engine shared by teachers.html, students.html,
+ * rooms.html and subjects.html. Each entity type declares its columns, its
+ * form fields and how to turn a row into a payload; everything else -
+ * loading, searching, the dialog, save and delete - lives here once.
+ *
+ * These used to be four tabs on a single data.html. One page per entity
+ * matches how the rest of the app is organised - a sidebar of distinct
+ * pages, each reachable and bookmarkable on its own - and means a school
+ * lands on exactly the list it came for instead of always starting at
+ * Teachers and clicking through.
+ *
+ * The page that loads this script sets window.DATA_TYPE to one of the keys
+ * below before the <script> tag for this file.
  */
 
 const alertBox = document.getElementById('alert');
@@ -10,7 +20,7 @@ const dialog = document.getElementById('dialog');
 const dialogAlert = document.getElementById('dialog-alert');
 
 let campuses = [];
-let current = 'teachers';
+const current = window.DATA_TYPE;
 let rows = [];
 let editing = null;
 
@@ -314,19 +324,7 @@ document.getElementById('dialog-delete').addEventListener('click', async () => {
   }
 });
 
-/* --- Tabs and search -------------------------------------------------------- */
-
-document.querySelectorAll('.tab').forEach((tab) => {
-  tab.addEventListener('click', async () => {
-    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-    tab.classList.add('active');
-    current = tab.dataset.tab;
-    document.getElementById('title').textContent = TYPES[current].title;
-    document.getElementById('search').value = '';
-    hideAlert(alertBox);
-    await load();
-  });
-});
+/* --- Search ------------------------------------------------------------------ */
 
 let searchTimer;
 document.getElementById('search').addEventListener('input', () => {

@@ -127,58 +127,84 @@ def parse(text: str) -> tuple[str, Optional[str], list[str]]:
 
 
 async def run_one(validator_key: str, version_id: str, days: list[int],
-                  totals: dict, timetable_id: str,
-                  attempt_id: str) -> ValidatorResult:
+                  totals: dict, timetable_id: str, attempt_id: str,
+                  day_cache: dict, per_validator: int) -> ValidatorResult:
     """
     Run one validator across every day.
 
-    Days run sequentially for a given validator so a single provider is not hit
-    with the whole cycle at once; the four validators run in parallel, which is
-    where the concurrency comes from.
+    Days used to run one after another, so a ten-day cycle cost ten
+    round-trips end to end and validation took longer than the nine layers
+    that built the timetable. They now run together, capped by a semaphore so
+    one provider is still not hit with the whole cycle at once - that cap is
+    what the sequential loop was really protecting, not the ordering.
 
-    A failure on any day fails the validator - the first problem found is what
-    the school needs to see.
+    A failure on any day fails the validator, and the earliest failing day is
+    the one reported, so the message does not change with network timing.
     """
     alias = await settings_service.get(validator_key)
     if not alias:
         return ValidatorResult(validator_key, "?", "error",
                                f"{validator_key} is not assigned to a model")
 
-    checked = 0
-    concerns: list[str] = []
-    for day in days:
-        day_data = await deterministic.summarise_day(version_id, day)
-        if not day_data["entries"]:
-            continue
+    gate = asyncio.Semaphore(max(1, per_validator))
+    # Once a day has failed there is nothing to learn from the rest, and a
+    # rate limit means the provider has stopped talking to us either way.
+    stop = asyncio.Event()
+
+    async def one_day(day: int):
+        """Returns (day, outcome, payload). Never raises."""
+        day_data = day_cache.get(day)
+        if not day_data or not day_data["entries"] or stop.is_set():
+            return (day, "skip", None)
 
         prompt = build_prompt(day_data, totals, day, len(days))
-        try:
-            text = await ai_cluster.call(
-                validator_key, prompt, json_mode=True, temperature=0,
-                timetable_id=timetable_id, attempt_id=attempt_id,
-                stage=f"validate_{validator_key}_day{day}",
-                locked_model=alias)
-        except ai_cluster.RateLimited:
-            return ValidatorResult(validator_key, alias, "rate_limited",
-                                   f"rate limited on day {day}", checked, len(days))
-        except ai_cluster.AIError as exc:
-            return ValidatorResult(validator_key, alias, "error",
-                                   str(exc)[:300], checked, len(days))
+        async with gate:
+            if stop.is_set():
+                return (day, "skip", None)
+            try:
+                text = await ai_cluster.call(
+                    validator_key, prompt, json_mode=True, temperature=0,
+                    timetable_id=timetable_id, attempt_id=attempt_id,
+                    stage=f"validate_{validator_key}_day{day}",
+                    locked_model=alias)
+            except ai_cluster.RateLimited:
+                stop.set()
+                return (day, "rate_limited", f"rate limited on day {day}")
+            except ai_cluster.AIError as exc:
+                stop.set()
+                return (day, "error", str(exc)[:300])
 
         try:
             result, reason, day_concerns = parse(text)
         except (json.JSONDecodeError, ValueError) as exc:
-            return ValidatorResult(validator_key, alias, "error",
-                                   f"unparseable response on day {day}: {exc}",
-                                   checked, len(days))
-
-        checked += 1
-        concerns.extend(f"Day {day}: {c}" for c in day_concerns)
+            stop.set()
+            return (day, "error", f"unparseable response on day {day}: {exc}")
 
         if result == "fail":
+            stop.set()
+            return (day, "fail", (reason, day_concerns))
+        return (day, "pass", day_concerns)
+
+    outcomes = list(await asyncio.gather(*[one_day(day) for day in days]))
+    # Sorted, so which reply landed first cannot change what is reported.
+    outcomes.sort(key=lambda o: o[0])
+
+    checked = 0
+    concerns: list[str] = []
+    for day, outcome, payload in outcomes:
+        if outcome in ("rate_limited", "error"):
+            return ValidatorResult(validator_key, alias, outcome, payload,
+                                   checked, len(days))
+        if outcome == "skip":
+            continue
+        checked += 1
+        if outcome == "fail":
+            reason, day_concerns = payload
+            concerns.extend(f"Day {day}: {c}" for c in day_concerns)
             return ValidatorResult(validator_key, alias, "fail",
                                    f"Day {day}: {reason}", checked, len(days),
                                    concerns)
+        concerns.extend(f"Day {day}: {c}" for c in payload)
 
     return ValidatorResult(validator_key, alias, "pass", None, checked,
                            len(days), concerns)
@@ -224,9 +250,41 @@ async def run_validation(version_id: str, attempt_id: str,
     days = await deterministic.validation_days(version_id)
     totals = await deterministic.global_summary(version_id)
 
+    # Summarise each day ONCE and share it between the validators. Each one
+    # used to build its own copy of the same summary, so a four-validator
+    # ten-day run made forty identical passes over the entries to produce ten
+    # distinct results.
+    summaries = await asyncio.gather(*[
+        deterministic.summarise_day(version_id, day) for day in days])
+    day_cache = dict(zip(days, summaries))
+
+    per_validator = await settings_service.get_int(
+        "validator_day_concurrency", 5)
+
+    # Leave out validators whose provider has no usable keys. A school that
+    # switches a provider off - to control spend, say - should not then wait
+    # on it: the validator cannot answer, so launching it only delays the
+    # quorum behind a call that was never going to succeed.
+    usable = []
+    for key in VALIDATOR_KEYS:
+        alias = await settings_service.get(key)
+        if not alias:
+            continue
+        entry = ai_cluster.MODEL_REGISTRY.get(alias)
+        if entry:
+            pool = ai_cluster._pools.get(entry[0])
+            if pool is None or not pool.entries:
+                log.info("Skipping %s: no active keys for %s", key, entry[0])
+                continue
+        usable.append(key)
+
+    if not usable:
+        usable = list(VALIDATOR_KEYS)
+
     results: list[ValidatorResult] = list(await asyncio.gather(*[
-        run_one(key, version_id, days, totals, timetable_id, attempt_id)
-        for key in VALIDATOR_KEYS
+        run_one(key, version_id, days, totals, timetable_id, attempt_id,
+                day_cache, per_validator)
+        for key in usable
     ]))
 
     for r in results:

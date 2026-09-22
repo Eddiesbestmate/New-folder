@@ -1,0 +1,819 @@
+===============================================================================
+KLASSER - DEPLOYING THE BACKEND TO AWS
+Frontend stays on Netlify. Written for this project specifically.
+===============================================================================
+
+-------------------------------------------------------------------------------
+0. READ THIS FIRST - THE THREE THINGS THAT TRIP PEOPLE UP
+-------------------------------------------------------------------------------
+
+(a) YOU ARE DEPLOYING TWO PROCESSES, NOT ONE.
+
+    - the API      : uvicorn main:app          (answers the browser)
+    - the worker   : python worker.py          (runs the 10-layer generation)
+
+    They are separate programs. The API accepts a generation request and puts
+    a job on a queue; the worker picks it up and does the 20-minute pipeline.
+    If you deploy only the API, the app will look fine, accept a generation,
+    and then sit on "queued" forever. This is the single most common way to
+    get this wrong.
+
+(b) THE API MUST BE HTTPS.
+
+    Netlify serves your frontend over https://. A browser will refuse to let
+    an https:// page call an http:// API - it is blocked as "mixed content",
+    silently, with only a console error. So you cannot point the frontend at
+    http://<ec2-ip>:8000 and expect it to work.
+
+    You do NOT have to buy a domain for this. Section 7 gives you two ways
+    round it for free - a DuckDNS subdomain with a real certificate, or
+    letting Netlify proxy the API so the browser never sees the http call.
+
+(c) GENERATIONS RUN FOR ~20 MINUTES AND STREAM PROGRESS.
+
+    Default proxy and load-balancer timeouts are usually 30-60 seconds. If you
+    do not raise them, long requests and the progress stream will be cut off
+    mid-run. Section 7 covers the settings that matter.
+
+
+-------------------------------------------------------------------------------
+1. YOU DO NOT NEED RDS - KEEP SUPABASE
+-------------------------------------------------------------------------------
+
+Klasser uses Supabase for two separate things:
+
+    - PostgreSQL     (all your tables, plus row-level security)
+    - Authentication (login, JWTs - frontend/js/auth.js talks to it directly)
+
+Moving the database to AWS RDS would give you the database but NOT the auth,
+which is wired into Supabase's own service. You would have to rebuild login
+from scratch. Don't. Keep Supabase exactly as it is and host only the two
+Python processes on AWS.
+
+So the finished picture is:
+
+    Browser ---> Netlify            (static HTML/CSS/JS)
+            ---> AWS EC2            (FastAPI + worker)
+            ---> Supabase           (Postgres + auth)
+    AWS EC2 ---> Supabase           (Postgres)
+            ---> AI providers       (Mistral, Gemini, Groq, OpenRouter)
+
+This also keeps your AWS bill to one small server.
+
+
+-------------------------------------------------------------------------------
+2. PICK THE SERVER
+-------------------------------------------------------------------------------
+
+EC2, Ubuntu 24.04 LTS, x86_64.
+
+Instance size:
+    t3.small   (2 vCPU, 2 GB RAM)   <-- recommended
+    t3.micro   (2 vCPU, 1 GB RAM)   free tier eligible for 12 months
+
+Use t3.small if you can. The pipeline holds the whole school in memory while
+it solves - students, classes, the conflict graph - and 1 GB is tight once
+the API and the worker are both running. t3.micro will work for a demo but
+can be killed by the OOM killer mid-generation, which looks like the worker
+mysteriously dying.
+
+Storage: 20 GB gp3 is plenty.
+
+Also allocate an ELASTIC IP and attach it. Without one, the public IP changes
+every time the instance stops, and your DNS record silently goes stale.
+
+
+-------------------------------------------------------------------------------
+2B. ACTUALLY CREATING THE SERVER - CLICK BY CLICK
+-------------------------------------------------------------------------------
+
+If you have never used AWS before, start here. This is the whole thing, from
+a blank console to a Linux prompt. About 15 minutes.
+
+--- STEP 1: PICK YOUR REGION -------------------------------------------------
+
+Sign in at https://console.aws.amazon.com
+
+Top RIGHT of the page there is a region name (e.g. "N. Virginia"). Click it
+and choose the one nearest you:
+
+    Australia  ->  Asia Pacific (Sydney)   ap-southeast-2
+
+This matters more than it looks. Resources live in ONE region. If you create
+a server in Sydney and later open the console while it is set to Virginia,
+your instance appears to have vanished. It hasn't - you are looking at the
+wrong region. Set it now and leave it alone.
+
+--- STEP 2: START THE LAUNCH WIZARD ------------------------------------------
+
+Search bar at the top -> type "EC2" -> click the EC2 service.
+Left sidebar -> Instances -> orange "Launch instances" button.
+
+--- STEP 3: NAME AND IMAGE ---------------------------------------------------
+
+Name:  klasser-backend
+
+Application and OS Images:
+    Click "Ubuntu"
+    In the dropdown choose: Ubuntu Server 24.04 LTS (HVM), SSD Volume Type
+    Architecture: 64-bit (x86)      <-- NOT Arm
+
+If you pick Arm/Graviton, some Python wheels have to compile from source and
+the install in section 5 gets slower and more fragile. Stay on x86.
+
+--- STEP 4: INSTANCE TYPE ----------------------------------------------------
+
+    t3.small              <-- recommended (2 GB RAM)
+    t2.micro / t3.micro   <-- "Free tier eligible", 1 GB RAM
+
+See section 2 for why 2 GB is worth it. If you want to stay at zero cost,
+take the micro and add swap (commands in section 15) - that largely covers
+the memory shortfall.
+
+--- STEP 5: KEY PAIR - THE IMPORTANT ONE -------------------------------------
+
+Under "Key pair (login)":
+
+    Click "Create new key pair"
+    Name:               klasser-key
+    Key pair type:      RSA
+    Private key format: .pem
+    Click "Create key pair"
+
+Your browser downloads klasser-key.pem immediately. THIS IS THE ONLY COPY
+THAT WILL EVER EXIST. AWS does not keep it and cannot re-issue it. Lose it
+and you cannot log into the server again.
+
+It lands in your Downloads folder. Move it somewhere sensible now - open
+PowerShell and run (the quotes matter, see step 10):
+
+    New-Item -ItemType Directory -Force -Path "$env:USERPROFILE/.ssh" | Out-Null
+    Move-Item "$env:USERPROFILE/Downloads/klasser-key.pem" "$env:USERPROFILE/.ssh/klasser-key.pem"
+
+NOTE THE FORWARD SLASHES. PowerShell accepts them in paths just fine, and
+they survive being copied out of a document - backslashes often do not, and
+a lost backslash turns "$env:USERPROFILE\.ssh" into "C:\Users\You.ssh",
+which is a different (non-existent) folder.
+
+Do not leave it in the project folder - you will eventually commit it to git.
+
+Lost track of it? Find it with:
+
+    Get-ChildItem "$env:USERPROFILE" -Recurse -Filter *.pem -ErrorAction SilentlyContinue | Select-Object FullName
+
+--- STEP 6: NETWORK SETTINGS (THE FIREWALL) ----------------------------------
+
+In the "Network settings" box click "Edit".
+
+    Auto-assign public IP:  Enable
+
+Under "Firewall (security groups)" choose "Create security group", then use
+"Add security group rule" until you have exactly:
+
+    Type: ssh     Port 22     Source type: My IP
+    Type: HTTP    Port 80     Source type: Anywhere   (0.0.0.0/0)
+    Type: HTTPS   Port 443    Source type: Anywhere   (0.0.0.0/0)
+
+"My IP" fills in your current home address automatically. If your ISP changes
+your IP later, SSH will stop working and you will have to come back and
+update this rule. That is normal, not someone attacking you.
+
+(If you chose section 7 Option B, also add Custom TCP port 8000 from
+Anywhere. Otherwise leave 8000 closed.)
+
+--- STEP 7: STORAGE ----------------------------------------------------------
+
+Change the default 8 GiB to:
+
+    20  GiB     gp3
+
+--- STEP 8: LAUNCH -----------------------------------------------------------
+
+Right-hand "Summary" panel -> "Launch instance" -> "View all instances".
+
+Wait for both:
+
+    Instance state:  Running
+    Status check:    2/2 checks passed       <-- takes ~2 minutes
+
+--- STEP 9: GIVE IT A FIXED IP -----------------------------------------------
+
+The auto-assigned public IP CHANGES every time the instance stops and starts.
+Pin it:
+
+    EC2 sidebar -> Network & Security -> Elastic IPs
+    "Allocate Elastic IP address" -> Allocate
+    Select it -> Actions -> "Associate Elastic IP address"
+        Resource type: Instance
+        Instance:      klasser-backend
+    -> Associate
+
+Write the address down. This is what DuckDNS points at and what you SSH to.
+
+An elastic IP is free WHILE ATTACHED to a running instance. If you keep the
+address but release the instance, AWS starts charging for it.
+
+--- STEP 10: CONNECT FROM WINDOWS --------------------------------------------
+
+Windows 10/11 has ssh built in. You do not need PuTTY. Open PowerShell.
+
+First fix the key's permissions. OpenSSH refuses a key that other Windows
+users could read, and this is where nearly everyone gets stuck the first
+time. The error is "UNPROTECTED PRIVATE KEY FILE" or "Permissions for ...
+are too open". chmod does nothing useful on Windows - use icacls:
+
+    cd "$env:USERPROFILE/.ssh"
+    icacls klasser-key.pem /inheritance:r
+    icacls klasser-key.pem /grant:r "$($env:USERNAME):(R)"
+
+ALWAYS QUOTE THE PATH. A username with a space - "Lucas Algie" gives
+C:\Users\Lucas Algie - makes unquoted PowerShell split the path at the space
+and fail. The quotes are not optional.
+
+Use forward slashes, as above. If you copy a path with backslashes out of
+this file and one goes missing, "$env:USERPROFILE\.ssh" silently becomes
+"C:\Users\You.ssh" - a folder that does not exist - and you get either
+"The system cannot find the file specified" or "Access to the path
+'You.ssh' is denied". Forward slashes cannot fail that way.
+
+Now connect. The username is "ubuntu" - not root, not your name:
+
+    ssh -i "$env:USERPROFILE/.ssh/klasser-key.pem" ubuntu@<YOUR-ELASTIC-IP>
+
+The first time it asks:
+
+    The authenticity of host ... can't be established.
+    Are you sure you want to continue connecting (yes/no/[fingerprint])?
+
+Type  yes  and press Enter. You should land on:
+
+    ubuntu@ip-172-31-x-x:~$
+
+That prompt means you are ON the server. Everything from section 4 onward is
+typed there, not on your laptop. This trips people up constantly - if a
+command in this guide fails with "command not found", check which machine
+you are actually on.
+
+--- IF SSH WILL NOT CONNECT --------------------------------------------------
+
+Times out / hangs
+    -> the security group SSH rule no longer matches your IP. EC2 ->
+       Security Groups -> your group -> Inbound rules -> Edit -> set the SSH
+       source back to "My IP".
+
+"Permission denied (publickey)"
+    -> wrong username (it is ubuntu for an Ubuntu image; ec2-user is Amazon
+       Linux), or you are pointing at the wrong .pem.
+
+"UNPROTECTED PRIVATE KEY FILE"
+    -> run the icacls commands above.
+
+icacls says "The system cannot find the file specified", or New-Item says
+"Access to the path 'You.ssh' is denied"
+    -> a backslash went missing when you copied the command, so the path
+       became C:\Users\You.ssh rather than C:\Users\You\.ssh. Retype it
+       with forward slashes:  cd "$env:USERPROFILE/.ssh"
+       If that folder does not exist yet, the key is still in Downloads -
+       see step 5 for the New-Item and Move-Item commands.
+
+Lost the .pem entirely
+    -> it cannot be recovered. Use EC2 Instance Connect instead: select the
+       instance -> "Connect" -> "EC2 Instance Connect" tab -> Connect. That
+       opens a browser terminal needing no key, and works as a permanent
+       alternative if you would rather not deal with key files at all.
+
+--- A HABIT WORTH FORMING ----------------------------------------------------
+
+When you are not using it, STOP the server (Instance state -> Stop instance).
+A stopped instance costs nothing for compute - only the 20 GB of storage,
+about USD 1.60/month.
+
+Do NOT use "Terminate". Stop is pause; terminate is destroy, permanently,
+along with everything on the disk.
+
+
+-------------------------------------------------------------------------------
+3. SECURITY GROUP (REFERENCE - YOU ALREADY SET THIS IN STEP 6)
+-------------------------------------------------------------------------------
+
+You created these rules during the launch wizard. This section is here for
+when you need to CHANGE them later - EC2 -> Network & Security ->
+Security Groups -> select yours -> Inbound rules -> Edit inbound rules.
+
+The rules you want are only these three:
+
+    SSH    TCP 22    Source: My IP        <-- your IP only, never 0.0.0.0/0
+    HTTP   TCP 80    Source: 0.0.0.0/0    <-- needed for certificate issuing
+    HTTPS  TCP 443   Source: 0.0.0.0/0
+
+Do NOT open port 8000 to the world if you are using section 7 Option A.
+Uvicorn listens on 8000 but only on localhost; Caddy is what faces the
+internet. Opening 8000 there would expose the API with no TLS at all.
+
+The exception is section 7 Option B (the Netlify proxy), which needs
+port 8000 open because Netlify's servers have to reach it directly. If you
+take that route, add:
+
+    Custom TCP  TCP 8000  Source: 0.0.0.0/0
+
+Outbound: leave as default (allow all). The server needs to reach Supabase
+and the AI providers.
+
+
+-------------------------------------------------------------------------------
+4. FIRST LOGIN AND SYSTEM PACKAGES
+-------------------------------------------------------------------------------
+
+You should already be at the ubuntu@... prompt from step 10. If not:
+
+    ssh -i "$env:USERPROFILE/.ssh/klasser-key.pem" ubuntu@<elastic-ip>
+
+Everything below runs ON THE SERVER.
+
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y software-properties-common git
+    sudo add-apt-repository -y ppa:deadsnakes/ppa
+    sudo apt update
+    sudo apt install -y python3.13 python3.13-venv python3.13-dev build-essential
+
+Why deadsnakes: this project is developed on Python 3.13. Ubuntu 24.04 ships
+3.12. It will probably run on 3.12, but matching your dev version removes a
+whole class of "works on my machine" problems.
+
+Confirm:
+    python3.13 --version
+
+
+-------------------------------------------------------------------------------
+5. GET THE CODE ON THE SERVER
+-------------------------------------------------------------------------------
+
+Create a dedicated directory and a virtualenv:
+
+    sudo mkdir -p /opt/klasser
+    sudo chown ubuntu:ubuntu /opt/klasser
+    cd /opt/klasser
+
+    # via git (best - makes updates one command later)
+    git clone <your-repo-url> .
+
+    # or copy from your laptop instead, run this ON YOUR LAPTOP:
+    #   scp -i your-key.pem -r "klasser-ai/backend" ubuntu@<ip>:/opt/klasser/
+
+    cd /opt/klasser/backend
+    python3.13 -m venv venv
+    ./venv/bin/pip install --upgrade pip
+    ./venv/bin/pip install -r requirements.txt
+
+IMPORTANT: do not copy your local venv/ folder up. It contains Windows
+binaries and will not run on Linux. Always create a fresh one on the server.
+
+Also make sure .env is NOT in git. Check:
+    git check-ignore backend/.env      # should print the path
+If it is not ignored, add it to .gitignore before you push anywhere.
+
+
+-------------------------------------------------------------------------------
+6. ENVIRONMENT VARIABLES
+-------------------------------------------------------------------------------
+
+The backend reads these (from backend/.env):
+
+    DATABASE_URL          Supabase Postgres connection string
+    DATABASE_SSL          set to "require" in production   <-- see note below
+    SUPABASE_URL          your Supabase project URL
+    SUPABASE_ANON_KEY     public key, safe to expose
+    SUPABASE_SERVICE_KEY  SECRET - full admin access, server only
+    ENCRYPTION_KEY        SECRET - decrypts stored AI provider keys
+    RESEND_API_KEY        SECRET - transactional email
+    RESEND_FROM           the from-address for email
+    ANTHROPIC_API_KEY     SECRET - if used
+
+Create it on the server:
+
+    cd /opt/klasser/backend
+    nano .env            # paste your values
+    chmod 600 .env       # owner-only. Do this. It contains admin credentials.
+
+TWO THINGS TO CHANGE FROM YOUR LOCAL .env:
+
+  1. DATABASE_SSL
+     Locally this is set to "disable" and the app logs a warning at startup
+     saying the password crosses the network in cleartext. That is acceptable
+     on your own machine. It is NOT acceptable between AWS and Supabase - that
+     traffic crosses the public internet. Set it to "require".
+
+  2. DATABASE_URL
+     Use Supabase's CONNECTION POOLER string, not the direct one. Find it in
+     Supabase under Project Settings -> Database -> Connection string ->
+     "Transaction pooler". The direct connection limits you to a small number
+     of connections; you are running two processes that both hold a pool.
+
+A NOTE ON THE AI PROVIDER KEYS (Mistral, Gemini, Groq, OpenRouter):
+These are NOT environment variables. They live encrypted in the `api_keys`
+table in the database, and are decrypted at runtime using ENCRYPTION_KEY.
+This means:
+    - they come across automatically with the database, nothing to copy
+    - but if ENCRYPTION_KEY differs from the one that encrypted them, they
+      will not decrypt, and every AI call fails. Use the same key.
+On startup you should see: "AI key pools loaded: {...}" with non-zero counts.
+If it says "none", your ENCRYPTION_KEY is wrong.
+
+
+-------------------------------------------------------------------------------
+7. HTTPS WITHOUT BUYING A DOMAIN
+-------------------------------------------------------------------------------
+
+You still need HTTPS (see section 0b), but you do NOT need to buy a domain.
+Two things that will NOT work, so you don't waste time on them:
+
+  - a certificate for a bare IP address. Let's Encrypt will not issue one.
+  - the EC2 public hostname (ec2-1-2-3-4.compute.amazonaws.com). Let's
+    Encrypt refuses to issue for amazonaws.com. It looks like a free domain
+    but it is a dead end.
+
+Pick ONE of the two options below.
+
+
+=== OPTION A: DUCKDNS - free hostname, real certificate (RECOMMENDED) ========
+
+DuckDNS gives you a permanent subdomain like klasser.duckdns.org, free, no
+card. Caddy then gets a genuine Let's Encrypt certificate for it. Everything
+works normally after that - including the live progress stream.
+
+ 1. Go to duckdns.org, sign in with Google/GitHub.
+ 2. Create a subdomain, e.g. "klasser"  ->  klasser.duckdns.org
+ 3. Put your elastic IP in the "current ip" box and press update.
+ 4. Copy your DuckDNS token (shown at the top of the page) - only needed if
+    you want the IP to auto-update, which you don't with an elastic IP.
+
+Confirm it resolves before continuing:
+
+    dig +short klasser.duckdns.org        # should print your elastic IP
+
+Install Caddy:
+
+    sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key'       | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt'       | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+    sudo apt update && sudo apt install -y caddy
+
+Configure:
+
+    sudo nano /etc/caddy/Caddyfile
+
+-------------------------------------------------------------------------------
+klasser.duckdns.org {
+    reverse_proxy localhost:8000 {
+        # Generations run ~20 minutes and stream progress over SSE.
+        # Without these the connection is cut mid-run and the progress page
+        # stops updating with no visible error.
+        transport http {
+            read_timeout 30m
+            write_timeout 30m
+        }
+        flush_interval -1
+    }
+}
+-------------------------------------------------------------------------------
+
+`flush_interval -1` disables response buffering. It is what makes the live
+progress actually stream instead of arriving in one lump at the end.
+
+    sudo systemctl reload caddy
+    curl https://klasser.duckdns.org/health
+
+Then in frontend/js/config.js:
+
+    API_BASE: 'https://klasser.duckdns.org'
+
+Downside: the URL is not pretty. That is the whole downside.
+
+
+=== OPTION B: NETLIFY PROXY - no domain, no certificate, no Caddy ============
+
+Netlify can proxy a path on your own site through to the backend. The browser
+only ever talks to Netlify over https, and Netlify talks to your EC2 box over
+plain http from its own servers. Mixed content never arises because the
+browser never sees the http call.
+
+ 1. Open port 8000 to the world in the security group (this is the one case
+    where you must - Netlify has to reach it). Leave 22 restricted to you.
+
+ 2. Run uvicorn on 0.0.0.0 instead of 127.0.0.1 in klasser-api.service:
+
+        ExecStart=... uvicorn main:app --host 0.0.0.0 --port 8000
+
+ 3. In frontend/, create a file named exactly  _redirects  (no extension):
+
+        /api/*  http://<YOUR-ELASTIC-IP>:8000/:splat  200
+
+ 4. In frontend/js/config.js:
+
+        API_BASE: '/api'
+
+ 5. Add your Netlify origin to CORS_ORIGINS as usual (section 10a).
+
+KNOW THE LIMITS BEFORE YOU CHOOSE THIS:
+
+  - Netlify's proxy times out at 26 seconds. Normal API calls are far below
+    that, and a generation is queued to the worker rather than held open, so
+    this is survivable - but the live SSE progress stream will be cut.
+    The progress page falls back to polling every 2 seconds automatically
+    (frontend/js/progress.js), so you still see progress; it just arrives in
+    2-second steps instead of streaming.
+  - Your API is exposed on a raw IP with no TLS between Netlify and EC2.
+    Acceptable for a school project, not for real student data.
+  - All API traffic counts against your Netlify bandwidth.
+
+Choose Option B if you want this running in ten minutes with nothing to
+configure. Choose Option A if you want it to behave properly - it is maybe
+fifteen minutes more work and it is the one I would use.
+
+-------------------------------------------------------------------------------
+8. RUN BOTH PROCESSES AS SERVICES
+-------------------------------------------------------------------------------
+
+systemd restarts them if they crash and starts them on boot.
+
+--- THE API ---
+
+    sudo nano /etc/systemd/system/klasser-api.service
+
+-------------------------------------------------------------------------------
+[Unit]
+Description=Klasser API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/klasser/backend
+EnvironmentFile=/opt/klasser/backend/.env
+ExecStart=/opt/klasser/backend/venv/bin/uvicorn main:app \
+          --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+-------------------------------------------------------------------------------
+
+Note --host 127.0.0.1, not 0.0.0.0. Only Caddy should be able to reach it.
+
+--- THE WORKER ---
+
+    sudo nano /etc/systemd/system/klasser-worker.service
+
+-------------------------------------------------------------------------------
+[Unit]
+Description=Klasser generation worker
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/klasser/backend
+EnvironmentFile=/opt/klasser/backend/.env
+ExecStart=/opt/klasser/backend/venv/bin/python worker.py --concurrency 1
+Restart=always
+RestartSec=10
+# A generation can take 20+ minutes. Give it time to finish on shutdown
+# rather than killing it mid-pipeline and leaving a half-written attempt.
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target
+-------------------------------------------------------------------------------
+
+Keep --concurrency 1 on a small instance. Two simultaneous generations on
+2 GB of RAM will not end well.
+
+Enable and start both:
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now klasser-api klasser-worker
+    sudo systemctl status klasser-api klasser-worker
+
+
+-------------------------------------------------------------------------------
+9. RUN THE DATABASE MIGRATIONS
+-------------------------------------------------------------------------------
+
+    cd /opt/klasser/backend
+    ./venv/bin/python migrate.py --status     # see what is pending
+    ./venv/bin/python migrate.py              # apply them
+
+Safe to re-run: applied migrations are recorded in schema_migrations and only
+new files execute. Current latest is 019_layer3_ai_proposals_off.sql.
+
+If Supabase already has your schema (it does, if you are pointing at the same
+project you develop against), --status will show everything as applied and
+this step changes nothing.
+
+
+-------------------------------------------------------------------------------
+10. TWO CODE CHANGES YOU MUST MAKE
+-------------------------------------------------------------------------------
+
+--- (a) BACKEND: allow your Netlify origin ---
+
+CORS_ORIGINS is a hardcoded list in backend/config.py (around line 68). The
+browser will block the frontend unless its exact origin is in that list.
+
+Edit it to your real origins and delete the dev ones:
+
+    CORS_ORIGINS = [
+        "https://klasser.ai",
+        "https://www.klasser.ai",
+        "https://klasser-test.netlify.app",
+    ]
+
+Remove the ngrok entry - that tunnel is gone and leaving stale origins in the
+list is pointless attack surface. Keep localhost entries only if you still
+want to develop against the production API (usually you don't).
+
+Origins must match EXACTLY: scheme, host and port. "https://klasser.ai" does
+not cover "https://www.klasser.ai". No trailing slash.
+
+--- (b) FRONTEND: point at the new API ---
+
+In frontend/js/config.js:
+
+    const KLASSER = {
+      API_BASE: 'https://klasser.duckdns.org',  <-- Option A
+    # or, for Option B (Netlify proxy):
+    # API_BASE: '/api',
+      SUPABASE_URL: '...',                    <-- unchanged
+      SUPABASE_ANON_KEY: '...',               <-- unchanged
+    };
+
+Leave the Supabase values alone; the frontend talks to Supabase directly for
+auth and the anon key is public by design (RLS is what protects the data).
+
+Commit and push - Netlify rebuilds automatically.
+
+
+-------------------------------------------------------------------------------
+11. CHECK IT ACTUALLY WORKS
+-------------------------------------------------------------------------------
+
+On the server:
+
+    curl http://localhost:8000/health                 # API is up
+    sudo systemctl status klasser-worker              # worker is running
+    journalctl -u klasser-worker -n 30                # "AI key pools loaded: {...}"
+
+From anywhere:
+
+    curl https://klasser.duckdns.org/health           # TLS + proxy work
+                                                      # (Option A only)
+
+In the browser, on your Netlify site:
+
+    1. Open DevTools -> Network before you start.
+    2. Log in.                       -> no CORS errors in console
+    3. Open a data page.             -> requests return 200
+    4. Start a generation.           -> it must leave "queued" within seconds
+
+Step 4 is the one that proves the worker is alive. If the job sits at
+"queued", the API is fine and the worker is not running - check its logs.
+
+
+-------------------------------------------------------------------------------
+12. DAY-TO-DAY OPERATIONS
+-------------------------------------------------------------------------------
+
+Watch the logs live (the equivalent of watch-backend.ps1 locally):
+
+    journalctl -u klasser-worker -f            # the pipeline - the useful one
+    journalctl -u klasser-api -f               # HTTP requests
+    journalctl -u klasser-worker -f -u klasser-api    # both together
+
+Restart:
+
+    sudo systemctl restart klasser-api klasser-worker
+
+Deploy an update:
+
+    cd /opt/klasser
+    git pull
+    ./backend/venv/bin/pip install -r backend/requirements.txt   # if deps changed
+    ./backend/venv/bin/python backend/migrate.py                 # if migrations added
+    sudo systemctl restart klasser-api klasser-worker
+
+*** THE MOST IMPORTANT LINE IN THIS FILE ***
+
+    RESTART THE WORKER AFTER EVERY CODE CHANGE.
+
+Python loads services/pipeline.py once, when the process starts. Editing the
+file changes nothing for a worker that is already running - it will happily
+keep executing the OLD code while you stare at the new code on disk and
+wonder why your fix had no effect. This has cost real debugging time on this
+project. If a change to the pipeline "does nothing", restart the worker
+before you investigate anything else.
+
+
+-------------------------------------------------------------------------------
+13. COSTS
+-------------------------------------------------------------------------------
+
+    t3.small, on all month            ~ USD 15 / month
+    t3.micro, free tier, 12 months    ~ USD 0 (then ~7.50)
+    20 GB gp3 storage                 ~ USD 1.60 / month
+    Elastic IP, while attached          free (charged only if unattached)
+    Data transfer out                   first 100 GB/month free
+
+Supabase free tier covers the database. AI provider calls are billed by those
+providers, not AWS - a full generation is the expensive part, so be careful
+about leaving anything that triggers generations running unattended.
+
+To pause spending: stop (do not terminate) the instance. You keep the disk
+and pay only for storage. Detach or release the elastic IP, or you will be
+charged for holding an idle address.
+
+Set a billing alarm: AWS Billing -> Budgets -> a monthly budget at, say, USD 20
+with an email alert. Do this on day one.
+
+
+-------------------------------------------------------------------------------
+14. SECURITY CHECKLIST
+-------------------------------------------------------------------------------
+
+    [ ] .env is chmod 600 and is NOT in git
+    [ ] SUPABASE_SERVICE_KEY exists only on the server, never in frontend/
+    [ ] DATABASE_SSL=require  (not "disable" as it is locally)
+    [ ] port 8000 is NOT in the security group
+    [ ] SSH is restricted to your IP
+    [ ] CORS_ORIGINS lists only origins you actually use
+    [ ] a billing alarm is set
+    [ ] ENCRYPTION_KEY is backed up somewhere safe - lose it and every stored
+        AI provider key becomes undecryptable
+
+Never put SUPABASE_SERVICE_KEY in frontend/js/config.js. It bypasses row-level
+security entirely - anyone reading your page source would have full admin
+access to every school's data.
+
+
+-------------------------------------------------------------------------------
+15. IF SOMETHING IS BROKEN
+-------------------------------------------------------------------------------
+
+Frontend loads but every request fails, console says CORS
+    -> the Netlify origin is not in CORS_ORIGINS, or does not match exactly.
+       Restart the API after editing config.py.
+
+Console says "Mixed Content" or requests are blocked with no server hit
+    -> API_BASE is http://. It must be https://.
+
+Generation stays on "queued" forever
+    -> the worker is not running. systemctl status klasser-worker
+
+Progress page never updates, then jumps at the end
+    -> response buffering. Check flush_interval -1 in the Caddyfile.
+
+Connection drops ~60s into a generation
+    -> proxy timeout. Check the read/write timeouts in the Caddyfile.
+       On Option B this is expected: Netlify cuts the stream at 26 seconds
+       and the progress page falls back to polling every 2 seconds. Progress
+       still updates, just in steps rather than smoothly.
+
+Worker starts then dies during a big generation, no Python error
+    -> out of memory. Confirm with: dmesg | grep -i oom
+       Move to t3.small, or add swap:
+         sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+         sudo mkswap /swapfile && sudo swapon /swapfile
+         echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+"AI key pools loaded: none"
+    -> ENCRYPTION_KEY does not match the one used to encrypt the stored keys.
+
+Database connection errors under load
+    -> you are on the direct connection string. Switch to the transaction
+       pooler (section 6).
+
+A code change appears to have no effect
+    -> restart the worker. See section 12.
+
+
+===============================================================================
+SHORT VERSION
+===============================================================================
+
+ 1. EC2 t3.small, Ubuntu 24.04 x86, elastic IP  (full walkthrough: 2B)
+ 2. Security group: 22 (your IP), 80, 443. NOT 8000.
+    Connect: ssh -i key.pem ubuntu@<ip>  (fix key perms with icacls first)
+ 3. Install Python 3.13, clone repo, fresh venv, pip install -r requirements
+ 4. Write .env (chmod 600), DATABASE_SSL=require, use the pooler URL
+ 5. HTTPS without buying a domain - pick one:
+      A) free DuckDNS subdomain + Caddy (real cert, streaming works)
+      B) Netlify _redirects proxying /api/* to http://<ip>:8000
+ 6. Two systemd services: klasser-api AND klasser-worker
+ 7. python migrate.py
+ 8. Add the Netlify origin to CORS_ORIGINS in config.py
+ 9. Set API_BASE in frontend/js/config.js to https://api.yourdomain, push
+10. Test that a generation leaves "queued" - that proves the worker runs
+
+Keep Supabase. Deploy two processes, not one. Use HTTPS. Restart the worker
+after every code change.
+===============================================================================

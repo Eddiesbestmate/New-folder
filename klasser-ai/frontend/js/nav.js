@@ -20,7 +20,10 @@
       ['queue.html', 'Queue'],
     ]],
     ['School', [
-      ['data.html', 'School data'],
+      ['teachers.html', 'Teachers'],
+      ['students.html', 'Students'],
+      ['rooms.html', 'Rooms'],
+      ['subjects.html', 'Subjects'],
       ['requirements.html', 'Class rules'],
       ['layout.html', 'Timetable layout'],
       ['transport.html', 'Transport'],
@@ -118,9 +121,26 @@
   const main = document.createElement('div');
   main.className = 'sidebar-main';
 
+  // A generation started from one page should stay visible from every other
+  // one - leaving progress.html used to mean losing track of it entirely
+  // until you thought to check queue.html again. It sits in the sidebar with
+  // the rest of the app chrome rather than as a banner over the page, which
+  // pushed the content down every time a run started.
+  const statusBar = document.createElement('div');
+  statusBar.className = 'gen-status-bar';
+  statusBar.hidden = true;
+  statusBar.setAttribute('aria-live', 'polite');
+  statusBar.innerHTML =
+    '<div class="gen-status-head">'
+    + '<span class="gen-dot" aria-hidden="true"></span><span>Running</span>'
+    + '</div>'
+    + '<span id="gen-status-text"></span>'
+    + '<a href="queue.html" id="gen-status-link">View progress</a>';
+
   topbar.replaceWith(shell);
   page.replaceWith(main);
   main.appendChild(page);
+  sidebar.insertBefore(statusBar, foot);
   shell.appendChild(sidebar);
   shell.appendChild(main);
 
@@ -132,5 +152,57 @@
         devLinks.forEach((a) => { a.hidden = false; });
       })
       .catch(() => { /* signed out or not provisioned - leave them hidden */ });
+
+    pollGenerationStatus(statusBar);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearInterval(genStatusTimer);
+        genStatusTimer = null;
+      } else if (!genStatusTimer) {
+        pollGenerationStatus(statusBar);
+      }
+    });
   }
 })();
+
+let genStatusTimer = null;
+
+async function pollGenerationStatus(bar) {
+  const GEN_STATUS_POLL_MS = 6000;
+  const LIVE = new Set(['queued', 'running']);
+  const here = window.location.pathname.split('/').pop() || '';
+
+  // The page itself already gives this a detailed, live view - a second,
+  // slower-polling summary banner above it would be redundant noise.
+  if (here === 'progress.html' || here === 'queue.html') return;
+
+  const tick = async () => {
+    try {
+      const data = await apiCall('GET', '/allocation/queue');
+      const mine = (data.jobs || []).filter((j) => LIVE.has(j.status));
+      if (!mine.length) {
+        bar.hidden = true;
+        return;
+      }
+      const running = mine.filter((j) => j.status === 'running').length;
+      const label = mine.length === 1
+        ? `Generating "${mine[0].timetable_name || 'a timetable'}"...`
+        : `${running} generation${running === 1 ? '' : 's'} running, `
+          + `${mine.length - running} waiting...`;
+      document.getElementById('gen-status-text').textContent = label;
+
+      const link = document.getElementById('gen-status-link');
+      link.href = mine.length === 1 && mine[0].timetable_id
+        ? `progress.html?timetable=${encodeURIComponent(mine[0].timetable_id)}`
+        : 'queue.html';
+
+      bar.hidden = false;
+    } catch {
+      // A blip here should not put a false banner on every page in the app.
+      bar.hidden = true;
+    }
+  };
+
+  await tick();
+  genStatusTimer = setInterval(tick, GEN_STATUS_POLL_MS);
+}

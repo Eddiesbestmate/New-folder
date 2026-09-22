@@ -1,4 +1,13 @@
-/* Klasser - transport fleet, routes and the solved schedule. */
+/* Klasser - transport fleet, routes and the solved schedule.
+ *
+ * Rebuilt to fix a real state bug: switching to Fleet or Routes and back to
+ * Schedule used to re-fetch every generated timetable and silently reset the
+ * version dropdown to its first option, discarding whatever the school had
+ * selected - while the day dropdown's "already filled" flag survived the
+ * switch, so it could go on showing days for a version that was no longer
+ * the one selected. Tab data now loads once and is cached; switching tabs
+ * re-renders from that cache instead of re-fetching and resetting it.
+ */
 
 const alertBox = document.getElementById('alert');
 const busDialog = document.getElementById('bus-dialog');
@@ -11,6 +20,14 @@ let buses = [];
 let routes = [];
 let editingBus = null;
 let editingRoute = null;
+
+// Schedule tab state, loaded once and reused across tab switches rather than
+// re-fetched every time the tab is reopened.
+let timetableOptions = null;   // [{id, name, version}] once fetched, else null
+let selectedVersion = null;
+let selectedDay = '';
+let scheduleCache = new Map(); // `${version}|${day}` -> response, so flipping
+                                // between days already seen is instant
 
 document.getElementById('logout').addEventListener('click', logout);
 
@@ -26,7 +43,7 @@ function campusOptions(selected) {
     + `${escapeHtml(c.name)}</option>`).join('');
 }
 
-/* --- Overview -------------------------------------------------------------- */
+/* --- Overview ---------------------------------------------------------------- */
 
 function renderOverview(o) {
   document.getElementById('stats').innerHTML = [
@@ -56,7 +73,7 @@ function renderOverview(o) {
     + ' Students needing to cross campuses will have no way to travel.';
 }
 
-/* --- Fleet ----------------------------------------------------------------- */
+/* --- Fleet --------------------------------------------------------------------- */
 
 function renderBuses() {
   document.getElementById('no-buses').hidden = buses.length > 0;
@@ -65,7 +82,7 @@ function renderBuses() {
       <td><strong>${escapeHtml(b.name)}</strong></td>
       <td>${b.capacity}</td>
       <td>${escapeHtml(b.home_campus)}</td>
-      <td><button class="btn small" data-bus="${i}">Edit</button></td>
+      <td><button class="btn small" data-bus="${i}" type="button">Edit</button></td>
     </tr>`).join('');
 
   document.querySelectorAll('[data-bus]').forEach((btn) => {
@@ -75,7 +92,7 @@ function renderBuses() {
 
 function openBus(bus) {
   editingBus = bus || null;
-  busAlert.hidden = true;
+  hideAlert(busAlert);
   document.getElementById('bus-title').textContent = bus ? 'Edit bus' : 'Add bus';
   document.getElementById('bus-name').value = bus ? bus.name : '';
   document.getElementById('bus-capacity').value = bus ? bus.capacity : 45;
@@ -91,7 +108,7 @@ document.getElementById('bus-cancel')
 
 document.getElementById('bus-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  busAlert.hidden = true;
+  hideAlert(busAlert);
 
   const body = {
     name: document.getElementById('bus-name').value.trim(),
@@ -103,13 +120,17 @@ document.getElementById('bus-form').addEventListener('submit', async (e) => {
     return;
   }
 
+  const btn = busDialog.querySelector('button[type="submit"]');
+  btn.disabled = true;
   try {
     if (editingBus) await apiCall('PATCH', `/transport/buses/${editingBus.id}`, body);
     else await apiCall('POST', '/transport/buses', body);
     busDialog.close();
-    await reload();
+    await reloadFleetAndRoutes();
   } catch (err) {
     showAlert(busAlert, err.message);
+  } finally {
+    btn.disabled = false;
   }
 });
 
@@ -118,14 +139,14 @@ document.getElementById('bus-delete').addEventListener('click', async () => {
   try {
     await apiCall('DELETE', `/transport/buses/${editingBus.id}`);
     busDialog.close();
-    await reload();
+    await reloadFleetAndRoutes();
   } catch (err) {
     // Buses used by a timetable cannot be removed; the message explains why.
     showAlert(busAlert, err.message);
   }
 });
 
-/* --- Routes ---------------------------------------------------------------- */
+/* --- Routes -------------------------------------------------------------------- */
 
 function renderRoutes() {
   document.getElementById('no-routes').hidden = routes.length > 0;
@@ -134,7 +155,7 @@ function renderRoutes() {
       <td>${escapeHtml(r.from_campus)}</td>
       <td>${escapeHtml(r.to_campus)}</td>
       <td>${r.travel_minutes} min</td>
-      <td><button class="btn small" data-route="${i}">Edit</button></td>
+      <td><button class="btn small" data-route="${i}" type="button">Edit</button></td>
     </tr>`).join('');
 
   document.querySelectorAll('[data-route]').forEach((btn) => {
@@ -144,7 +165,7 @@ function renderRoutes() {
 
 function openRoute(route) {
   editingRoute = route || null;
-  routeAlert.hidden = true;
+  hideAlert(routeAlert);
   document.getElementById('route-title').textContent =
     route ? 'Edit route' : 'Add route';
   document.getElementById('route-from').innerHTML =
@@ -170,7 +191,7 @@ document.getElementById('route-cancel')
 
 document.getElementById('route-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  routeAlert.hidden = true;
+  hideAlert(routeAlert);
 
   const body = {
     from_campus_id: document.getElementById('route-from').value,
@@ -183,6 +204,8 @@ document.getElementById('route-form').addEventListener('submit', async (e) => {
     return;
   }
 
+  const btn = routeDialog.querySelector('button[type="submit"]');
+  btn.disabled = true;
   try {
     if (editingRoute) {
       await apiCall('PATCH', `/transport/routes/${editingRoute.id}`, body);
@@ -191,9 +214,11 @@ document.getElementById('route-form').addEventListener('submit', async (e) => {
       await apiCall('POST', '/transport/routes', body, { both_ways: both });
     }
     routeDialog.close();
-    await reload();
+    await reloadFleetAndRoutes();
   } catch (err) {
     showAlert(routeAlert, err.message);
+  } finally {
+    btn.disabled = false;
   }
 });
 
@@ -202,41 +227,50 @@ document.getElementById('route-delete').addEventListener('click', async () => {
   try {
     await apiCall('DELETE', `/transport/routes/${editingRoute.id}`);
     routeDialog.close();
-    await reload();
+    await reloadFleetAndRoutes();
   } catch (err) {
     showAlert(routeAlert, err.message);
   }
 });
 
-/* --- Schedule -------------------------------------------------------------- */
+/* --- Schedule -------------------------------------------------------------------
+ *
+ * Loaded once per page visit (timetableOptions stays non-null once fetched)
+ * and re-rendered from cache on every later tab switch, rather than the old
+ * behaviour of re-fetching /timetables and rebuilding the version dropdown -
+ * hence resetting the selection - every time this tab was reopened.
+ */
 
-async function loadVersions() {
+async function ensureScheduleData() {
+  if (timetableOptions !== null) return;  // already loaded this page visit
+
   const timetables = await apiCall('GET', '/timetables');
-  const withVersions = timetables.filter((t) => t.latest_version);
+  timetableOptions = timetables.filter((t) => t.latest_version);
 
-  document.getElementById('version').innerHTML = withVersions.length
-    ? withVersions.map((t) =>
-        `<option value="${t.latest_version}">${escapeHtml(t.name)}</option>`).join('')
-    : '<option value="">No generated timetables yet</option>';
-
-  if (withVersions.length) await loadSchedule();
-  else document.getElementById('chains').innerHTML =
-    '<p class="muted">Generate a timetable to see the bus schedule.</p>';
+  const versionSelect = document.getElementById('version');
+  if (!timetableOptions.length) {
+    versionSelect.innerHTML = '<option value="">No generated timetables yet</option>';
+    versionSelect.disabled = true;
+    return;
+  }
+  versionSelect.disabled = false;
+  versionSelect.innerHTML = timetableOptions
+    .map((t) => `<option value="${t.latest_version}">${escapeHtml(t.name)}</option>`)
+    .join('');
+  selectedVersion = timetableOptions[0].latest_version;
+  versionSelect.value = selectedVersion;
 }
 
-async function loadSchedule() {
-  const versionId = document.getElementById('version').value;
-  if (!versionId) return;
-
+function renderSchedule(data) {
   const daySelect = document.getElementById('day');
-  const day = daySelect.value;
-  const data = await apiCall('GET', `/transport/schedule/${versionId}`,
-                             null, { day });
-
-  if (!daySelect.dataset.filled) {
+  // The day list is specific to a version, so it is only rebuilt when the
+  // version actually changes (tracked via a data attribute) - not on every
+  // render, which would blow away whatever day the school had picked.
+  if (daySelect.dataset.forVersion !== selectedVersion) {
     daySelect.innerHTML = '<option value="">All days</option>'
       + data.days.map((d) => `<option value="${d}">Day ${d}</option>`).join('');
-    daySelect.dataset.filled = '1';
+    daySelect.dataset.forVersion = selectedVersion;
+    daySelect.value = selectedDay;
   }
 
   document.getElementById('schedule-stats').textContent =
@@ -266,15 +300,48 @@ async function loadSchedule() {
     </div>`).join('');
 }
 
-document.getElementById('version').addEventListener('change', () => {
-  document.getElementById('day').dataset.filled = '';
-  loadSchedule().catch((err) => showAlert(alertBox, err.message));
+async function loadSchedule() {
+  if (!selectedVersion) {
+    document.getElementById('chains').innerHTML =
+      '<p class="muted">Generate a timetable to see the bus schedule.</p>';
+    document.getElementById('schedule-stats').textContent = '';
+    return;
+  }
+
+  const cacheKey = `${selectedVersion}|${selectedDay}`;
+  const chains = document.getElementById('chains');
+  hideAlert(alertBox);
+
+  if (scheduleCache.has(cacheKey)) {
+    renderSchedule(scheduleCache.get(cacheKey));
+    return;
+  }
+
+  // Only the panel shows a loading state - switching days should not make
+  // the whole page flash back to its outer loading screen.
+  chains.innerHTML = '<p class="muted">Loading...</p>';
+  try {
+    const data = await apiCall('GET', `/transport/schedule/${selectedVersion}`,
+                               null, { day: selectedDay });
+    scheduleCache.set(cacheKey, data);
+    renderSchedule(data);
+  } catch (err) {
+    chains.innerHTML = '';
+    showAlert(alertBox, err.message);
+  }
+}
+
+document.getElementById('version').addEventListener('change', (e) => {
+  selectedVersion = e.target.value || null;
+  selectedDay = '';
+  loadSchedule();
 });
-document.getElementById('day').addEventListener('change', () => {
-  loadSchedule().catch((err) => showAlert(alertBox, err.message));
+document.getElementById('day').addEventListener('change', (e) => {
+  selectedDay = e.target.value;
+  loadSchedule();
 });
 
-/* --- Tabs ------------------------------------------------------------------ */
+/* --- Tabs ------------------------------------------------------------------- */
 
 document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', async () => {
@@ -285,7 +352,8 @@ document.querySelectorAll('.tab').forEach((tab) => {
     }
     if (tab.dataset.tab === 'schedule') {
       try {
-        await loadVersions();
+        await ensureScheduleData();
+        await loadSchedule();
       } catch (err) {
         showAlert(alertBox, err.message);
       }
@@ -293,9 +361,9 @@ document.querySelectorAll('.tab').forEach((tab) => {
   });
 });
 
-/* --- Load ------------------------------------------------------------------ */
+/* --- Load ------------------------------------------------------------------- */
 
-async function reload() {
+async function reloadFleetAndRoutes() {
   const [overview, busList, routeList] = await Promise.all([
     apiCall('GET', '/transport/overview'),
     apiCall('GET', '/transport/buses'),
@@ -307,9 +375,13 @@ async function reload() {
   renderOverview(overview);
   renderBuses();
   renderRoutes();
+
+  // A saved bus or route can change whether a route the schedule already
+  // depends on is even valid - stale cached chains would then be wrong.
+  scheduleCache.clear();
 }
 
-/* --- Crossing campuses mid-day --------------------------------------------- */
+/* --- Crossing campuses mid-day ------------------------------------------------- */
 
 async function loadCrossCampus(me) {
   const box = document.getElementById('allow-cross');
@@ -374,7 +446,7 @@ document.getElementById('save-cross').addEventListener('click', async () => {
   } else {
     document.getElementById('main').hidden = false;
     await loadCrossCampus(me);
-    await reload();
+    await reloadFleetAndRoutes();
   }
 
   document.getElementById('loading').hidden = true;

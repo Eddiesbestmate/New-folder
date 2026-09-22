@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Students - Klasser</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page" style="max-width:1100px">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">School data</span>
+    <h1>Students</h1>
+
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
+        <input id="search" placeholder="Search..." style="max-width:280px">
+        <span class="muted small" id="count"></span>
+        <button class="btn btn-primary" id="add" type="button"
+                style="margin-left:auto">Add</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="table" id="table">
+          <thead><tr id="head"></tr></thead>
+          <tbody id="body"></tbody>
+        </table>
+      </div>
+      <p class="muted small" id="empty" hidden style="margin:14px 0 0"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Edit dialog -->
+<dialog id="dialog">
+  <!-- No method="dialog": that makes Enter close the dialog and discard the
+       edit. The form submits normally and js/data-engine.js handles it. -->
+  <form id="dialog-form">
+    <h2 id="dialog-title" style="margin-bottom:14px"></h2>
+    <div id="dialog-alert" hidden></div>
+    <div id="dialog-fields"></div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" id="dialog-save" type="submit">Save</button>
+      <button class="btn" id="dialog-cancel" type="button">Cancel</button>
+      <button class="btn" id="dialog-delete" type="button"
+              style="margin-left:auto;color:var(--text-danger)">Delete</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<script>window.DATA_TYPE = 'students';</script>
+<script src="js/data-engine.js"></script>
+
+</body>
+</html>

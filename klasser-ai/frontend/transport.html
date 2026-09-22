@@ -51,15 +51,14 @@
       <div class="card" style="margin-bottom:16px;
            border-left:3px solid var(--purple)">
         <h3 style="margin-top:0">Moving between campuses</h3>
-        <label style="display:flex;gap:10px;align-items:start;cursor:pointer">
-          <input type="checkbox" id="allow-cross" style="margin-top:3px">
-          <span>
-            <strong>Let students change campus during the day</strong>
-            <span class="muted small" style="display:block;margin-top:3px"
-                  id="cross-detail"></span>
-          </span>
+        <label for="allow-cross"
+               style="display:flex;gap:10px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="allow-cross">
+          <strong>Let students change campus during the day</strong>
         </label>
-        <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+        <p class="muted small" id="cross-detail"
+           style="margin:8px 0 0 28px"></p>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
           <button class="btn" id="save-cross" type="button">Save</button>
           <span class="small muted" id="cross-note"></span>
         </div>

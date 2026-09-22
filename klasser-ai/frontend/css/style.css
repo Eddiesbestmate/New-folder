@@ -149,6 +149,13 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--purple);
   box-shadow: 0 0 0 3px var(--purple-light);
 }
+input[type="checkbox"], input[type="radio"] {
+  /* The rule above is written for text fields. Without this a checkbox
+   * stretches to fill its flex column and shoves its own label far to the
+   * right - which is exactly what went wrong on the transport page. */
+  width: auto; flex: 0 0 auto; margin: 0;
+  accent-color: var(--purple);
+}
 input::placeholder { color: var(--slate-light); }
 .hint { margin-top: 4px; font-size: 11px; color: var(--slate-light); }
 .field-row { display: flex; gap: 12px; }
@@ -517,6 +524,42 @@ dialog::backdrop { background: rgba(26,26,46,.38); }
 .sidebar .btn { width: 100%; }
 
 .sidebar-main { flex: 1 1 auto; min-width: 0; }
+
+/* --- Generation status (nav.js) ---------------------------------------------
+ * Lives in the sidebar, under the nav links, so it sits with the rest of the
+ * app chrome instead of pushing the page content down. Shown on every page
+ * while this school has a generation queued or running, so leaving
+ * progress.html does not mean losing track of it. */
+.gen-status-bar {
+  margin: 0 10px 10px;
+  padding: 10px 11px;
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.13);
+  border: 1px solid rgba(255,255,255,.2);
+  font-size: 12px; line-height: 1.4; color: #fff;
+}
+.gen-status-bar .gen-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber); flex: 0 0 auto;
+  animation: gen-pulse 1.3s ease-in-out infinite;
+}
+.gen-status-head { display: flex; align-items: center; gap: 8px; }
+.gen-status-head span:not(.gen-dot) {
+  font-size: 10px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase; color: rgba(255,255,255,.72);
+}
+#gen-status-text {
+  display: block; margin: 4px 0 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gen-status-bar a {
+  color: var(--amber); font-weight: 600; text-decoration: none; font-size: 12px;
+}
+.gen-status-bar a:hover { text-decoration: underline; }
+@keyframes gen-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .gen-status-bar .gen-dot { animation: none; }
+}
 
 /* Under 900px the column would crush the content, so it lies down into a
  * scrollable strip along the top instead of collapsing behind a toggle. */

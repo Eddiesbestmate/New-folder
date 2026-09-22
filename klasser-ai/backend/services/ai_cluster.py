@@ -105,8 +105,15 @@ _loaded = False
 
 # Swappable so tests can drive the retry and fallback logic without network
 # calls or real credentials.
+# The SDK defaults to a ten minute timeout, which is not a timeout so much as
+# a hang: one stalled request held the whole validation stage silent for
+# minutes with nothing in the log to say why. A provider that has not answered
+# in two minutes is not about to.
+AI_REQUEST_TIMEOUT = 120.0
+
 _client_factory: Callable[[str, str], Any] = lambda api_key, base_url: AsyncOpenAI(
-    api_key=api_key, base_url=base_url, max_retries=0)
+    api_key=api_key, base_url=base_url, max_retries=0,
+    timeout=AI_REQUEST_TIMEOUT)
 
 
 def set_client_factory(factory: Callable[[str, str], Any]) -> None:

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard - Klasser AI</title>
+  <title>Dashboard - Klasser</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -28,14 +28,14 @@
     <p class="muted" id="school-meta"></p>
 
     <div class="card" style="margin-top:20px">
-      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap">
         <div>
           <h3>Getting set up</h3>
           <p class="muted small" style="margin:0">
             Complete these before generating a timetable.
           </p>
         </div>
-        <div style="display:flex;gap:8px;flex:0 0 auto;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;max-width:100%">
           <a class="btn" href="data.html">School data</a>
           <a class="btn" href="timetables.html">Timetables</a>
           <a class="btn" href="billing.html">Billing</a>
@@ -87,6 +87,7 @@
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
 <script>
   const alertBox = document.getElementById('alert');
 

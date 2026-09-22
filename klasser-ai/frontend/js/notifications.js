@@ -1,4 +1,4 @@
-/* Klasser AI - notification preferences. Auto-saves; no save button. */
+/* Klasser - notification preferences. Auto-saves; no save button. */
 
 const alertBox = document.getElementById('alert');
 

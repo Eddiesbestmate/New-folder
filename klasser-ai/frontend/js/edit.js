@@ -1,4 +1,4 @@
-/* Klasser AI - request a timetable change in plain English. */
+/* Klasser - request a timetable change in plain English. */
 
 const alertBox = document.getElementById('alert');
 const params = new URLSearchParams(window.location.search);

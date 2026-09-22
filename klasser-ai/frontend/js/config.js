@@ -1,4 +1,4 @@
-/* Klasser AI - frontend configuration.
+/* Klasser - frontend configuration.
  *
  * The anon key is public by design: it ships to every browser and is safe here.
  * RLS is what protects the data. The service role key must NEVER appear in any

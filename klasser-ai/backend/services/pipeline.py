@@ -40,6 +40,7 @@ STAGES: list[tuple[str, str, int]] = [
     ("layer3_period_slots", "Assigning periods", 20),
     ("layer4_rooms", "Assigning rooms", 12),
     ("layer5_teachers", "Assigning teachers", 18),
+    ("layer5b_gap_repair", "Closing timetable gaps", 3),
     ("layer6_duties", "Assigning duties", 8),
     ("layer7_transport", "Solving transport", 5),
     ("layer8_bus_duties", "Assigning bus duties", 4),
@@ -572,14 +573,127 @@ def _conflict_graph(ctx: Context) -> dict[str, set[str]]:
     return graph
 
 
+def _minutes(value) -> int:
+    """A time of day as minutes past midnight."""
+    return value.hour * 60 + value.minute
+
+
+async def _travel_rules(ctx: Context) -> tuple[bool, dict, Any]:
+    """
+    What the school allows, and how long it actually takes to get between
+    campuses.
+
+    routes.travel_minutes has always held the answer; nothing consulted it, so
+    timetables were produced that put a student in two campuses in back-to-back
+    periods with no time to travel.
+    """
+    allow = bool(await db.fetchval("""
+        SELECT allow_cross_campus_travel FROM school_preferences
+        WHERE school_id = $1
+    """, ctx.school_id))
+
+    travel: dict[tuple[str, str], int] = {}
+    for row in await db.fetch("""
+        SELECT from_campus_id, to_campus_id, travel_minutes
+        FROM routes WHERE school_id = $1
+    """, ctx.school_id):
+        travel[(str(row["from_campus_id"]), str(row["to_campus_id"]))] = \
+            row["travel_minutes"]
+
+    period_at = {(p["day_number"], p["period_number"]): p for p in ctx.periods}
+
+    def gap_minutes(day: int, a: int, b: int) -> int:
+        """Clock minutes between the end of the earlier period and the start
+        of the later one. Counts the breaks in between, because that is where
+        the travelling happens."""
+        lo, hi = (a, b) if a <= b else (b, a)
+        first, second = period_at.get((day, lo)), period_at.get((day, hi))
+        if not first or not second:
+            return 0
+        return _minutes(second["start_time"]) - _minutes(first["end_time"])
+
+    return allow, travel, gap_minutes
+
+
+def _teacher_ok(code, slot, subject_of, teacher_supply, slot_subjects) -> bool:
+    """
+    Are there enough teachers of this subject to run another class now?
+
+    The room check below already refuses to put three PE classes in one period
+    when the school has one gym. A subject's teachers are just as finite, and
+    were never counted: packing parallel streams into a shared slot raised the
+    peak demand for every subject at once, and layer 5 then failed with "every
+    Economics teacher is already busy when 12ECO2 meets" - after layer 3 had
+    already committed to the clash.
+
+    This is a necessary condition, not a sufficient one. A teacher of two
+    subjects may still be taken by the other one, which only layer 5 can know.
+    Catching the impossible cases here is what stops layer 5 being handed a
+    problem with no answer.
+    """
+    subject = subject_of.get(code)
+    if not subject:
+        return True
+    supply = teacher_supply.get(subject, 0)
+    return not (supply and slot_subjects[slot][subject] >= supply)
+
+
+def _travel_ok(code, slot, graph, assigned, campus_of, travel, gap_minutes,
+               allow_cross) -> bool:
+    """
+    Whether a student in this class could physically be here.
+
+    Classes sharing students already cannot share a slot. This asks the next
+    question: if the other class is at the other campus on the same day, is
+    there enough of a break between the two to get there?
+    """
+    mine = campus_of.get(code)
+    if mine is None:
+        return True
+
+    day, period = slot
+    for other in graph.get(code, ()):
+        theirs = campus_of.get(other)
+        if theirs is None or theirs == mine:
+            continue
+        for other_day, other_period in assigned.get(other, ()):
+            if other_day != day:
+                continue
+            if not allow_cross:
+                # Crossing mid-day is switched off, so these two classes have
+                # to fall on different days entirely.
+                return False
+            need = (travel.get((mine, theirs))
+                    or travel.get((theirs, mine)) or 0)
+            if gap_minutes(day, period, other_period) < need:
+                return False
+    return True
+
+
 async def layer3_period_slots(ctx: Context) -> None:
     slots = [(p["day_number"], p["period_number"]) for p in ctx.teaching_periods]
     if not slots:
         raise PipelineError("The layout has no teaching periods",
                             stage="layer3_period_slots", school_fault=True)
 
+    allow_cross, travel, gap_minutes = await _travel_rules(ctx)
+    campus_of = {g["code"]: (str(g["campus_id"]) if g.get("campus_id") else None)
+                 for g in ctx.groups}
+    prefer_doubles = await settings_service.get_bool("prefer_double_periods", True)
+
+    # Classes that are the same subject, year and campus are parallel streams
+    # of one cohort: their students are disjoint, so they may share a slot.
+    sibling_key = {
+        g["code"]: (g["subject"], g["year_level"], campus_of[g["code"]])
+        for g in ctx.groups
+    }
+
     graph = _conflict_graph(ctx)
-    assigned: dict[str, list[tuple[int, int]]] = {}
+    # Every class starts with an empty list rather than being absent, so the
+    # placement helpers can read a class's slots without guarding for it.
+    assigned: dict[str, list[tuple[int, int]]] = {
+        g["code"]: [] for g in ctx.groups
+    }
     slot_load: dict[tuple[int, int], int] = defaultdict(int)
 
     wanted: dict[str, tuple[int, int]] = {}
@@ -587,20 +701,30 @@ async def layer3_period_slots(ctx: Context) -> None:
         wanted[group["code"]] = ctx.periods_for(group["subject"],
                                                 group["year_level"])
 
-    # Collect the model's suggestions per campus, as PIPELINE.md chunks it.
+    # Collect the model's suggestions per campus, as PIPELINE.md chunks it -
+    # but only if a school has actually asked for it. Since minimums moved to
+    # a guaranteed deterministic pass, these proposals only ever influence the
+    # best-effort top-up, and measured against today's runs that influence
+    # was marginal: three generations placed cleanly on the packer alone. The
+    # call itself was 16.8% of total wall-clock time for one stage of ten.
+    # Off by default; a school that wants the AI's opinion on slot placement
+    # can turn it back on and pay for it deliberately.
+    use_proposals = await settings_service.get_bool(
+        "layer3_use_ai_proposals", False)
     proposals: dict[str, list[tuple[int, int]]] = {}
-    campuses = ctx.campuses or [{"id": None, "name": "All"}]
-    for i, campus in enumerate(campuses):
-        codes = [g["code"] for g in ctx.groups if g["campus_id"] == campus["id"]]
-        if not codes and i == 0:
-            codes = [g["code"] for g in ctx.groups]
-        if not codes:
-            continue
-        await set_progress(ctx.attempt_id, "layer3_period_slots",
-                           f"{campus['name']} ({i + 1}/{len(campuses)})",
-                           _pct("layer3_period_slots", i / max(1, len(campuses))))
-        proposals.update(
-            await _ask_slots(ctx, codes, wanted, slots, graph, assigned))
+    if use_proposals:
+        campuses = ctx.campuses or [{"id": None, "name": "All"}]
+        for i, campus in enumerate(campuses):
+            codes = [g["code"] for g in ctx.groups if g["campus_id"] == campus["id"]]
+            if not codes and i == 0:
+                codes = [g["code"] for g in ctx.groups]
+            if not codes:
+                continue
+            await set_progress(ctx.attempt_id, "layer3_period_slots",
+                               f"{campus['name']} ({i + 1}/{len(campuses)})",
+                               _pct("layer3_period_slots", i / max(1, len(campuses))))
+            proposals.update(
+                await _ask_slots(ctx, codes, wanted, slots, graph, assigned))
 
     # Assign globally, most constrained first.
     #
@@ -621,71 +745,201 @@ async def layer3_period_slots(ctx: Context) -> None:
     # What each class needs a room of, and how many of each type exist. Layer 4
     # assigns the actual rooms, but it can only succeed if this layer respects
     # how many exist - three PE classes and one gym cannot run at once.
+    # Keyed by campus as well as type, because a room cannot be borrowed from
+    # the other site. Counted school-wide, 22 labs split 11 and 11 read as 22
+    # available in every slot, so layer 3 would stack more lab classes at one
+    # campus than it owns and layer 4 then failed with "every suitable room is
+    # already busy when 8DES6 meets" - a clash layer 3 had already committed to.
     room_need = {
-        g["code"]: ctx.room_type_for(g["subject"], g["year_level"])
+        g["code"]: (campus_of[g["code"]],
+                    ctx.room_type_for(g["subject"], g["year_level"]))
         for g in ctx.groups
+        if ctx.room_type_for(g["subject"], g["year_level"])
     }
-    room_supply: dict[str, int] = defaultdict(int)
+    room_supply: dict[tuple, int] = defaultdict(int)
     for room in ctx.rooms:
         if room["room_type"]:
-            room_supply[room["room_type"]] += 1
+            campus = str(room["campus_id"]) if room["campus_id"] else None
+            room_supply[(campus, room["room_type"])] += 1
     slot_rooms: dict[tuple[int, int], dict[str, int]] = defaultdict(
         lambda: defaultdict(int))
 
-    for group in order:
-        code = group["code"]
-        lo, hi = wanted[code]
-        chosen: list[tuple[int, int]] = []
+    # The same accounting for teachers: how many of each subject exist, and
+    # how many classes of it are already running in each slot.
+    subject_of = {g["code"]: g["subject"] for g in ctx.groups}
+    teacher_supply: dict[str, int] = defaultdict(int)
+    for teacher in ctx.teachers:
+        for subject in (teacher.get("subjects") or []):
+            teacher_supply[subject] += 1
+    slot_subjects: dict[tuple[int, int], dict[str, int]] = defaultdict(
+        lambda: defaultdict(int))
 
-        # Honour the model's suggestion where it is legal.
-        for slot in proposals.get(code, []):
-            if len(chosen) >= hi:
-                break
-            if _slot_ok(code, slot, graph, assigned, chosen,
-                        room_need, room_supply, slot_rooms):
-                chosen.append(slot)
+    def take(code: str, slot: tuple[int, int]) -> None:
+        """Commit a slot, keeping the load and room tallies in step."""
+        assigned[code].append(slot)
+        slot_load[slot] += 1
+        needed = room_need.get(code)
+        if needed:
+            slot_rooms[slot][needed] += 1
+        subject = subject_of.get(code)
+        if subject:
+            slot_subjects[slot][subject] += 1
 
-        # Fill the rest with the least contended slot, preferring a day this
-        # class is not already on so its periods spread across the cycle.
-        while len(chosen) < lo:
+    def fill(code: str, target: int, *, required: bool) -> None:
+        chosen = assigned[code]
+
+        # A double covers the pedagogical case for meeting twice in a day.
+        # Nothing capped a class at that, and once sibling-packing and the
+        # doubles preference both outrank "avoid reusing a day" in the sort
+        # below, a class that needs many periods a cycle can end up doubled
+        # twice into the same day - 7SPA1 got period 1-2 AND period 4-5 on
+        # day 1, a school day that is three quarters Spanish.
+        MAX_PER_DAY = 2
+
+        def placeable(slot: tuple[int, int]) -> bool:
+            day = slot[0]
+            same_day = sum(1 for d, _ in chosen if d == day)
+            if same_day >= MAX_PER_DAY:
+                return False
+            return (_slot_ok(code, slot, graph, assigned, chosen,
+                             room_need, room_supply, slot_rooms)
+                    and _travel_ok(code, slot, graph, assigned, campus_of,
+                                   travel, gap_minutes, allow_cross)
+                    and _teacher_ok(code, slot, subject_of, teacher_supply,
+                                    slot_subjects))
+
+        # Where the parallel classes of this same subject and year already
+        # sit. They hold disjoint students by construction, so sharing a slot
+        # with one is always legal - and it is the difference between a year
+        # level costing one block of periods per subject or one per class.
+        mine = sibling_key[code]
+        sibling_slots = {
+            slot
+            for other, key in sibling_key.items()
+            if key == mine and other != code
+            for slot in assigned[other]
+        }
+
+        # The model's suggestions shape the surplus, never the floor. Taken
+        # first they scatter a cohort across the cycle - the model is asked
+        # one campus at a time and has no notion of packing - and the classes
+        # placed last then cannot reach their minimum at all. The
+        # deterministic packer guarantees the floor; the AI gets the top-up,
+        # where there is slack for a preference to be worth honouring.
+        if not required:
+            for slot in proposals.get(code, []):
+                if len(chosen) >= target:
+                    break
+                if placeable(slot):
+                    take(code, slot)
+
+        while len(chosen) < target:
             used_days = {d for d, _ in chosen}
-            candidates = [
-                s for s in slots
-                if _slot_ok(code, s, graph, assigned, chosen,
-                            room_need, room_supply, slot_rooms)
-            ]
+            candidates = [s for s in slots if placeable(s)]
             if not candidates:
+                if not required:
+                    # Topping up is best-effort. A class that already has its
+                    # minimum and cannot find another slot simply keeps what
+                    # it has rather than failing the whole generation.
+                    return
+                # Ask which constraint actually did the rejecting rather than
+                # inferring it from the class needing a room type at all. The
+                # two causes call for opposite responses, and guessing sent a
+                # real school off adding 50 classrooms to a timetable whose
+                # rooms were 8% used - the blockage was student overlap, and
+                # the extra rooms changed nothing.
+                by_clash, by_room = _why_blocked(
+                    code, slots, graph, assigned, chosen,
+                    room_need, room_supply, slot_rooms)
                 needed = room_need.get(code)
-                if needed and room_supply.get(needed):
+
+                if by_room and by_room >= by_clash and needed:
                     raise PipelineError(
-                        f"{code} needs {lo} periods in a {needed}, but the "
-                        f"school has {room_supply[needed]} of them and every "
-                        "slot is already taken by another class that needs one. "
-                        f"Add a {needed}, or reduce how often the subjects "
-                        "using it meet.",
+                        f"{code} needs {target} periods in a {needed[1]}, "
+                        f"but its campus has {room_supply[needed]} of them and "
+                        "every slot is already taken by another class that "
+                        f"needs one. Add a {needed[1]} there, or reduce how "
+                        "often the subjects using it meet.",
                         stage="layer3_period_slots", school_fault=True)
                 raise PipelineError(
-                    f"{code} needs {lo} periods but only {len(chosen)} slots are "
-                    "free once every class sharing its students is placed. The "
-                    "cycle is too short for the subject load, or classes are too "
-                    "large to split across periods.",
+                    f"{code} needs {target} periods but only {len(chosen)} slots "
+                    f"are free: {by_clash} of {len(slots)} in the cycle are "
+                    "already taken by another class sharing its students"
+                    + (f", and {by_room} by a shortage of {needed[1]}s"
+                       if by_room
+                       else "")
+                    + ". The cycle is too short for the subject load, or too "
+                    "many subjects draw on the same students.",
                     stage="layer3_period_slots", school_fault=True)
 
-            candidates.sort(key=lambda s: (s[0] in used_days, slot_load[s], s))
-            chosen.append(candidates[0])
+            # A double is two teaching periods back to back on the same day
+            # with nothing between them - so the gap has to be zero. Adjacent
+            # period numbers are not enough: periods 2 and 3 straddle recess.
+            def doubles_with_chosen(slot: tuple[int, int]) -> bool:
+                day, period = slot
+                return any(d == day and abs(p - period) == 1
+                           and gap_minutes(day, period, p) <= 0
+                           for d, p in chosen)
 
-        assigned[code] = chosen
-        needed = room_need.get(code)
-        for slot in chosen:
-            slot_load[slot] += 1
-            if needed:
-                slot_rooms[slot][needed] += 1
+            # Pack, do not spread. Every candidate here has already passed
+            # _slot_ok, which means no class sharing our students is in it -
+            # so joining a busy slot costs nothing and leaves an empty one
+            # free for somebody else. Preferring the emptiest slot, as this
+            # once did, scatters a cohort's parallel classes across the cycle:
+            # a year level with three streams a subject then needs 210 slots
+            # out of 70 and cannot be placed at all.
+            candidates.sort(key=lambda s: (
+                s not in sibling_slots,
+                not (prefer_doubles and doubles_with_chosen(s)),
+                -slot_load[s],
+                s[0] in used_days,
+                s,
+            ))
+            take(code, candidates[0])
+
+    # Two passes, not one. A school states a range per subject, and letting an
+    # early class sit on the top of its range before a later one has reached
+    # its floor is how a cohort ends up with a class it cannot place at all -
+    # 9ENG3 was refused all 70 slots while earlier classes held their maximum.
+    # Everyone reaches their minimum first and the surplus is shared out
+    # afterwards, which on this school's data still fills 99% of the target.
+    for group in order:
+        fill(group["code"], wanted[group["code"]][0], required=True)
+    for group in order:
+        fill(group["code"], wanted[group["code"]][1], required=False)
 
     await _write_slots(ctx, assigned)
 
     spread = sum(len(v) for v in assigned.values())
     await stage_done(ctx.attempt_id, "layer3_period_slots",
                      {"slots": spread, "classes": len(assigned)})
+
+
+def _why_blocked(code: str, slots: list, graph: dict[str, set[str]],
+                 assigned: dict[str, list[tuple[int, int]]],
+                 chosen: list[tuple[int, int]],
+                 room_need: dict[str, str], room_supply: dict[str, int],
+                 slot_rooms: dict) -> tuple[int, int]:
+    """
+    Count why every slot was refused: student overlap, or room scarcity.
+
+    _slot_ok answers yes or no, which is all the placement loop needs but not
+    enough to tell a school what to change. A class blocked by overlap needs
+    the timetable loosened; one blocked by rooms needs a room. The advice is
+    opposite, so the failure path counts rather than assumes.
+    """
+    needed = room_need.get(code)
+    supply = room_supply.get(needed, 0) if needed else 0
+
+    by_clash = by_room = 0
+    for slot in slots:
+        if slot in chosen:
+            continue
+        if any(slot in assigned.get(other, ()) for other in graph.get(code, ())):
+            by_clash += 1
+        elif supply and slot_rooms[slot][needed] >= supply:
+            by_room += 1
+    return by_clash, by_room
 
 
 def _slot_ok(code: str, slot: tuple[int, int], graph: dict[str, set[str]],
@@ -783,12 +1037,26 @@ async def _write_slots(ctx: Context,
         (p["day_number"], p["period_number"]): p["id"] for p in ctx.periods
     }
 
+    ends_at = {(p["day_number"], p["period_number"]): p["end_time"]
+               for p in ctx.periods}
+    starts_at = {(p["day_number"], p["period_number"]): p["start_time"]
+                 for p in ctx.periods}
+
+    def opens_a_double(day: int, number: int, taken: set) -> bool:
+        """This period runs straight into the class's next one, with no break."""
+        after = ends_at.get((day, number))
+        before = starts_at.get((day, number + 1))
+        return ((day, number + 1) in taken and after is not None
+                and before is not None and _minutes(before) <= _minutes(after))
+
     slot_rows = []
     registry_rows = []
     for group in ctx.groups:
+        placed = set(assigned.get(group["code"], []))
         for day, number in assigned.get(group["code"], []):
             period_id = period_by_slot.get((day, number))
-            slot_rows.append((ctx.attempt_id, group["id"], day, number, period_id))
+            slot_rows.append((ctx.attempt_id, group["id"], day, number,
+                              period_id, opens_a_double(day, number, placed)))
             for student in group["students"]:
                 registry_rows.append(
                     (ctx.attempt_id, student["id"], period_id, group["id"]))
@@ -800,8 +1068,8 @@ async def _write_slots(ctx: Context,
             await conn.executemany("""
                 INSERT INTO class_group_slots
                     (attempt_id, class_group_id, day_number, period_number,
-                     layout_period_id)
-                VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING
+                     layout_period_id, is_double_first)
+                VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING
             """, slot_rows)
         if registry_rows:
             await conn.executemany("""
@@ -832,7 +1100,8 @@ def _pct(stage: str, fraction: float) -> int:
 
 # --- Layer 4: rooms ----------------------------------------------------------
 
-def rank_rooms(rooms: list[dict], size: int, room_type: Optional[str]) -> list[dict]:
+def rank_rooms(rooms: list[dict], size: int, room_type: Optional[str],
+               campus: Optional[Any] = None) -> list[dict]:
     """
     Rank rooms for a class, excluding any that cannot hold it.
 
@@ -842,6 +1111,12 @@ def rank_rooms(rooms: list[dict], size: int, room_type: Optional[str]) -> list[d
     out = []
     for room in rooms:
         if room["capacity"] < size:
+            continue
+        # A room cannot be borrowed from the other site. Without this a class
+        # at officer was handed a berwick room and the timetable asked its
+        # students to be in two places at once.
+        if (campus is not None and room["campus_id"] is not None
+                and str(room["campus_id"]) != str(campus)):
             continue
         if room_type and room["room_type"] and room["room_type"] != room_type:
             continue
@@ -862,14 +1137,41 @@ async def layer4_rooms(ctx: Context) -> None:
     room_busy: dict[tuple[Any, int, int], str] = {}
     chosen: dict[str, dict] = {}
 
-    for group in sorted(ctx.groups, key=lambda g: -len(g["students"])):
+    def options(group) -> int:
+        wanted = (ctx.subject_map.get(group["subject"]) or {}).get("room_type")
+        return len(rank_rooms(ctx.rooms, len(group["students"]), wanted,
+                              group.get("campus_id")))
+
+    # Giving a class one room for all of its periods is a graph colouring:
+    # classes competing for the same room type at the same campus conflict
+    # whenever they share a slot, and the rooms are the colours. Greedy
+    # colouring only works if the most entangled class picks first - ordering
+    # by class size instead left four lab classes at berwick with no room
+    # that was free across all their periods, even though the campus had
+    # enough labs. Colouring by conflicts places every one of them.
+    def rivals(group) -> int:
+        wanted = (ctx.subject_map.get(group["subject"]) or {}).get("room_type")
+        mine = set(slots_by_group.get(group["id"], []))
+        return sum(
+            1 for other in ctx.groups
+            if other["id"] != group["id"]
+            and other.get("campus_id") == group.get("campus_id")
+            and (ctx.subject_map.get(other["subject"]) or {}).get("room_type") == wanted
+            and mine & set(slots_by_group.get(other["id"], [])))
+
+    # Fewest usable rooms first, then most entangled: a specialist class with
+    # three rooms on its campus must choose before a class with fifty-three.
+    for group in sorted(ctx.groups,
+                        key=lambda g: (options(g), -rivals(g),
+                                       -len(g["students"]))):
         size = len(group["students"])
         wanted_type = (ctx.subject_map.get(group["subject"]) or {}).get("room_type")
-        candidates = rank_rooms(ctx.rooms, size, wanted_type)
+        campus = group.get("campus_id")
+        candidates = rank_rooms(ctx.rooms, size, wanted_type, campus)
 
         if not candidates and wanted_type:
             # Relax the type rather than fail: a warning is better than no timetable.
-            candidates = rank_rooms(ctx.rooms, size, None)
+            candidates = rank_rooms(ctx.rooms, size, None, campus)
             if candidates:
                 await emit(ctx.attempt_id, "chunk_complete",
                            f"No {wanted_type} big enough for {group['code']} - "
@@ -921,11 +1223,39 @@ async def layer5_teachers(ctx: Context) -> None:
     teacher_busy: dict[tuple[Any, int, int], str] = {}
     load: dict[Any, int] = defaultdict(int)
 
+    # max_blocks limits a teacher over the whole cycle, and nothing limited a
+    # single day. A validator rejected an otherwise clean timetable because
+    # one teacher drew all seven periods of Day 5 - no clash, so the
+    # deterministic checks passed it, but not a day anyone could teach.
+    per_day: dict[tuple[Any, int], int] = defaultdict(int)
+    max_per_day = await settings_service.get_int("teacher_max_periods_per_day", 5)
+
+    def day_has_room(teacher, slots) -> bool:
+        wanted: dict[int, int] = defaultdict(int)
+        for day, _ in slots:
+            wanted[day] += 1
+        return all(per_day[(teacher["id"], day)] + n <= max_per_day
+                   for day, n in wanted.items())
+
     subject_groups: dict[str, list[dict]] = defaultdict(list)
     for group in ctx.groups:
         subject_groups[group["subject"]].append(group)
 
-    for i, (subject, groups) in enumerate(sorted(subject_groups.items())):
+    # Scarcest subject first, for the reason layer 3 places its hardest
+    # classes first: a teacher covering both English and German is spent by
+    # whichever is handled sooner, and alphabetical order handed them all to
+    # English. German, with nine teachers to English's twenty-nine, then had
+    # none left - "every German teacher is already busy when 9GER2 meets".
+    # Fewest qualified teachers goes first, so the subjects with the least
+    # room to manoeuvre choose while they still can.
+    def scarcity(item: tuple[str, list[dict]]) -> tuple:
+        subject, groups = item
+        qualified = sum(1 for t in ctx.teachers
+                        if subject in (t["subjects"] or []))
+        return (qualified, -len(groups), subject)
+
+    for i, (subject, groups) in enumerate(
+            sorted(subject_groups.items(), key=scarcity)):
         await set_progress(ctx.attempt_id, "layer5_teachers",
                            f"{subject} ({i + 1}/{len(subject_groups)})",
                            _pct("layer5_teachers", i / max(1, len(subject_groups))))
@@ -938,7 +1268,20 @@ async def layer5_teachers(ctx: Context) -> None:
 
         preference = await _ask_teachers(ctx, subject, groups, qualified, load)
 
-        for group in groups:
+        # Giving a class one teacher for all of its periods is the same
+        # colouring problem layer 4 has with rooms: classes of this subject
+        # conflict when they share a slot, and the teachers are the colours.
+        # Assigned in arbitrary order, 9BIO2 found all seven Biology teachers
+        # taken across its periods even though an assignment existed. The most
+        # entangled class has to choose first.
+        def entangled(group) -> int:
+            mine = set(slots_by_group.get(group["id"], []))
+            return sum(1 for other in groups
+                       if other["id"] != group["id"]
+                       and mine & set(slots_by_group.get(other["id"], [])))
+
+        for group in sorted(groups, key=lambda g: (-entangled(g),
+                                                   -len(g["students"]))):
             slots = slots_by_group.get(group["id"], [])
             pick = None
 
@@ -948,9 +1291,21 @@ async def layer5_teachers(ctx: Context) -> None:
                                load[t["id"]],
                                _jitter(str(t["id"]), ctx.seed)))
             for teacher in ordered:
-                if all((teacher["id"], d, p) not in teacher_busy for d, p in slots):
+                if (all((teacher["id"], d, p) not in teacher_busy
+                        for d, p in slots)
+                        and day_has_room(teacher, slots)):
                     pick = teacher
                     break
+
+            # A teacher free at the right times but already full on one of
+            # those days is better than no teacher at all, so the day cap
+            # gives way rather than failing the run.
+            if pick is None:
+                for teacher in ordered:
+                    if all((teacher["id"], d, p) not in teacher_busy
+                           for d, p in slots):
+                        pick = teacher
+                        break
 
             if pick is None:
                 raise PipelineError(
@@ -960,6 +1315,7 @@ async def layer5_teachers(ctx: Context) -> None:
 
             for d, p in slots:
                 teacher_busy[(pick["id"], d, p)] = group["code"]
+                per_day[(pick["id"], d)] += 1
             load[pick["id"]] += len(slots)
             group["teacher_id"] = pick["id"]
 
@@ -1157,6 +1513,173 @@ async def _assign_duties(ctx: Context, bus: bool, stage: str) -> int:
 
     await stage_done(ctx.attempt_id, stage, {"assigned": assigned})
     return assigned
+
+
+async def layer5b_gap_repair(ctx: Context) -> None:
+    """
+    Close mid-day gaps in a student's own schedule where a cheap move exists.
+
+    Layer 3 packs periods to fit classes into the cycle; it has no notion of
+    any one student's day as a whole, so a period can be full of OTHER
+    students' classes while empty for this one. A gap here means a free
+    period sitting between two of a student's classes on the same day - fine
+    at the edges, disruptive in the middle, and never intended for the junior
+    years a school has deliberately timetabled full.
+
+    This can only run here, after rooms and teachers are assigned: the repair
+    move needs to know a class's teacher and room to check the move is legal,
+    and neither exists until Layer 4 and Layer 5.
+
+    The move relocates ONE occurrence of a class the gapped student takes -
+    from wherever else it meets to the gap slot - never touching the class's
+    teacher, room, campus, or total period count. Because the count never
+    changes, it cannot violate a min/max another layer already enforced; it
+    can only ever be at least as good as what Layer 3 produced.
+
+    Measured against a real generation before this was written: roughly a
+    quarter of gaps close. The rest are blocked by the classes themselves -
+    with 25-30 students in a class, most candidate slots are already occupied
+    by someone in it via a different subject. This is a genuine improvement,
+    not a guarantee of a gap-free timetable.
+    """
+    stage = "layer5b_gap_repair"
+    slots_by_group = await _slots_by_group(ctx)
+    teaching = [(p["day_number"], p["period_number"]) for p in ctx.teaching_periods]
+    by_id = {g["id"]: g for g in ctx.groups}
+
+    teacher_busy: dict[Any, set] = defaultdict(set)
+    room_busy: dict[Any, set] = defaultdict(set)
+    class_slots: dict[str, set] = {}
+    student_slots: dict[str, set] = defaultdict(set)
+    student_groups: dict[str, set] = defaultdict(set)
+    group_students: dict[str, set] = {}
+
+    for group in ctx.groups:
+        gid = group["id"]
+        gslots = set(slots_by_group.get(gid, []))
+        class_slots[gid] = gslots
+        if group.get("teacher_id"):
+            teacher_busy[group["teacher_id"]] |= gslots
+        if group.get("room_id"):
+            room_busy[group["room_id"]] |= gslots
+        roster = {s["id"] for s in group["students"]}
+        group_students[gid] = roster
+        for sid in roster:
+            student_slots[sid] |= gslots
+            student_groups[sid].add(gid)
+
+    def gaps_for(sid: str) -> list[tuple[int, int]]:
+        by_day: dict[int, set] = defaultdict(set)
+        for d, p in student_slots[sid]:
+            by_day[d].add(p)
+        found = []
+        for d, periods in by_day.items():
+            lo, hi = min(periods), max(periods)
+            for dd, pp in teaching:
+                if dd == d and lo <= pp <= hi and pp not in periods:
+                    found.append((d, pp))
+        return found
+
+    before = [(sid, g) for sid in sorted(student_slots) for g in gaps_for(sid)]
+
+    moves: list[tuple[str, tuple[int, int], tuple[int, int]]] = []
+    for sid, target in before:
+        # `before` is a snapshot taken once, up front. Moving a class affects
+        # every one of its students at once, so an earlier move made for a
+        # DIFFERENT student's gap can already have filled this one as a side
+        # effect - this ran live against real data and hit exactly that:
+        # `allocation_registry_students_pkey` collided because the code below
+        # excluded this student from its own clash check, trusting `target`
+        # was still empty for them. Re-verify against current state first.
+        if target in student_slots[sid]:
+            continue
+        day, _ = target
+        moved = False
+        for gid in sorted(student_groups[sid]):
+            if moved:
+                break
+            group = by_id[gid]
+            teacher, room, campus = (group.get("teacher_id"),
+                                     group.get("room_id"), group.get("campus_id"))
+            if not teacher or not room or target in class_slots[gid]:
+                continue
+            # At most a double on any one day - the cap layer 3 enforces on
+            # first placement applies here too, or a repair could recreate
+            # the "two doubles in a day" problem it was added to prevent.
+            if sum(1 for d, _ in class_slots[gid] if d == day) >= 2:
+                continue
+
+            for origin in sorted(s for s in class_slots[gid] if s[0] != day):
+                if target in teacher_busy[teacher] or target in room_busy[room]:
+                    continue
+                if any(other != sid and target in student_slots[other]
+                      for other in sorted(group_students[gid])):
+                    continue
+                # The student's other classes already on this day must be at
+                # the same campus - never invent a cross-campus jump the
+                # travel layer has not validated.
+                same_day_campuses = {
+                    by_id[g2]["campus_id"]
+                    for g2 in student_groups[sid]
+                    for d3, _ in class_slots[g2] if d3 == day
+                }
+                if same_day_campuses and campus not in same_day_campuses:
+                    continue
+
+                teacher_busy[teacher].discard(origin); teacher_busy[teacher].add(target)
+                room_busy[room].discard(origin); room_busy[room].add(target)
+                class_slots[gid].discard(origin); class_slots[gid].add(target)
+                for other in group_students[gid]:
+                    student_slots[other].discard(origin)
+                    student_slots[other].add(target)
+                moves.append((gid, origin, target))
+                moved = True
+                break
+
+    if moves:
+        async with db.transaction() as conn:
+            for gid, origin, target in moves:
+                old_pid = _period_id(ctx, *origin)
+                new_pid = _period_id(ctx, *target)
+                if not old_pid or not new_pid:
+                    continue
+                await conn.execute("""
+                    UPDATE class_group_slots
+                    SET day_number = $3, period_number = $4, layout_period_id = $5
+                    WHERE attempt_id = $1 AND class_group_id = $2
+                      AND day_number = $6 AND period_number = $7
+                """, ctx.attempt_id, gid, target[0], target[1], new_pid,
+                    origin[0], origin[1])
+
+                group = by_id[gid]
+                if group.get("teacher_id"):
+                    await conn.execute("""
+                        UPDATE allocation_registry_teachers
+                        SET layout_period_id = $1
+                        WHERE attempt_id = $2 AND teacher_id = $3
+                          AND layout_period_id = $4
+                    """, new_pid, ctx.attempt_id, group["teacher_id"], old_pid)
+                if group.get("room_id"):
+                    await conn.execute("""
+                        UPDATE allocation_registry_rooms
+                        SET layout_period_id = $1
+                        WHERE attempt_id = $2 AND room_id = $3
+                          AND layout_period_id = $4
+                    """, new_pid, ctx.attempt_id, group["room_id"], old_pid)
+                await conn.execute("""
+                    UPDATE allocation_registry_students
+                    SET layout_period_id = $1
+                    WHERE attempt_id = $2 AND layout_period_id = $3
+                      AND student_id = ANY($4)
+                """, new_pid, ctx.attempt_id, old_pid,
+                    list(group_students[gid]))
+
+    after = sum(len(gaps_for(sid)) for sid in student_slots)
+    log.info("Gap repair: %d moves closed %d of %d gap instances "
+             "(%d remain)", len(moves), len(before) - after, len(before), after)
+    await stage_done(ctx.attempt_id, stage, {
+        "moves": len(moves), "gaps_before": len(before), "gaps_after": after,
+    })
 
 
 async def layer6_duties(ctx: Context) -> None:
@@ -1433,6 +1956,7 @@ LAYERS = [
     ("layer3_period_slots", layer3_period_slots),
     ("layer4_rooms", layer4_rooms),
     ("layer5_teachers", layer5_teachers),
+    ("layer5b_gap_repair", layer5b_gap_repair),
     ("layer6_duties", layer6_duties),
     ("layer7_transport", layer7_transport),
     ("layer8_bus_duties", layer8_bus_duties),

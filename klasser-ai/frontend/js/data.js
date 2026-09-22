@@ -1,4 +1,4 @@
-/* Klasser AI - school data pages.
+/* Klasser - school data pages.
  *
  * One table driver for all four entity types. Each type declares its columns,
  * its form fields and how to turn a row into a payload; everything else -

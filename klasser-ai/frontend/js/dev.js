@@ -1,4 +1,4 @@
-/* Klasser AI - dev portal.
+/* Klasser - dev portal.
  *
  * Every panel is read-only except four deliberate actions: refund a failed
  * generation, adjust a school's credits, decide an invoiced-billing

@@ -44,6 +44,59 @@ class RouteIn(BaseModel):
         return v
 
 
+class PreferencesIn(BaseModel):
+    allow_cross_campus_travel: bool
+
+
+@router.get("/preferences")
+async def get_preferences(user: CurrentUser) -> dict:
+    """
+    Whether students may cross campuses during the day.
+
+    A school that has never answered gets the safe answer: no. The row is
+    created by migration 018 for every existing school, but a school created
+    since then may not have one, so the default is stated here too rather than
+    left to a missing row.
+    """
+    row = await db.fetchrow("""
+        SELECT allow_cross_campus_travel, updated_at
+        FROM school_preferences WHERE school_id = $1
+    """, user["school_id"])
+
+    shortest = await db.fetchval("""
+        SELECT min(travel_minutes) FROM routes WHERE school_id = $1
+    """, user["school_id"])
+
+    return {
+        "allow_cross_campus_travel":
+            bool(row["allow_cross_campus_travel"]) if row else False,
+        "updated_at": row["updated_at"] if row else None,
+        # The UI needs this to say whether any break is actually long enough.
+        "shortest_route_minutes": shortest,
+    }
+
+
+@router.put("/preferences")
+async def set_preferences(payload: PreferencesIn,
+                          user: Annotated[dict, Depends(require_owner)]) -> dict:
+    await db.execute("""
+        INSERT INTO school_preferences (school_id, allow_cross_campus_travel)
+        VALUES ($1, $2)
+        ON CONFLICT (school_id) DO UPDATE
+            SET allow_cross_campus_travel = $2, updated_at = now()
+    """, user["school_id"], payload.allow_cross_campus_travel)
+
+    log.info("School %s set cross-campus travel to %s",
+             user["school_id"], payload.allow_cross_campus_travel)
+    return {
+        "allow_cross_campus_travel": payload.allow_cross_campus_travel,
+        "message": ("Students may now cross campuses, but only over a break "
+                    "long enough to travel."
+                    if payload.allow_cross_campus_travel else
+                    "Students will be kept at one campus per day."),
+    }
+
+
 async def owned_campus(school_id: str, campus_id: str) -> str:
     ok = await db.fetchval(
         "SELECT 1 FROM campuses WHERE id = $1 AND school_id = $2",

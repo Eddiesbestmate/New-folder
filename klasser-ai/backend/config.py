@@ -6,7 +6,7 @@
 # =============================================================================
 
 # --- App ---
-APP_NAME = "Klasser AI"
+APP_NAME = "Klasser"
 APP_URL = "https://klasser.ai"
 FROM_EMAIL = "Klasser <notifications@klasser.ai>"
 SUPPORT_EMAIL = "support@klasser.ai"

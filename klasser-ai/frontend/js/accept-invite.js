@@ -1,4 +1,4 @@
-/* Klasser AI - accept an invite and join a school.
+/* Klasser - accept an invite and join a school.
 
    The only signed-out page that writes anything. The token in the URL is the
    credential; everything else on the form is the invitee describing themselves. */

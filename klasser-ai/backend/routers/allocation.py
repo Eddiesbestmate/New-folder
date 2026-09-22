@@ -153,6 +153,59 @@ async def queue_status(user: CurrentUser) -> dict:
     }
 
 
+@router.post("/stop")
+async def stop(user: Annotated[dict, Depends(require_owner)]) -> dict:
+    """
+    Stop every generation this school has queued or running.
+
+    The two cases are cleaned up in different places, because only one of them
+    has a worker to speak for it. A job that never started is finished here:
+    its hold is released and its timetable row removed, leaving no trace of a
+    run that produced nothing - the same treatment a refused generation gets.
+    A job already running is only marked; its worker notices within seconds,
+    abandons the work and releases its own hold, because until it actually
+    stops we do not know how far it got.
+    """
+    school_id = user["school_id"]
+    cancelled = await queue.cancel_school(school_id)
+
+    never_started = [j for j in cancelled if j["was"] == "queued"]
+    interrupted = [j for j in cancelled if j["was"] == "running"]
+
+    for job in never_started:
+        if not job["timetable_id"]:
+            continue
+        await billing.release(school_id, job["timetable_id"], "stopped before starting")
+        await db.execute(
+            "DELETE FROM timetables WHERE id = $1 AND school_id = $2",
+            job["timetable_id"], school_id)
+
+    log.info("School %s stopped %d queued and %d running job(s)",
+             school_id, len(never_started), len(interrupted))
+
+    return {
+        "stopped": len(cancelled),
+        "queued_cancelled": len(never_started),
+        "running_stopped": len(interrupted),
+        # The worker needs a moment to notice, so the caller should not expect
+        # the run to read as stopped the instant this returns.
+        "message": _stop_message(len(never_started), len(interrupted)),
+    }
+
+
+def _stop_message(queued: int, running: int) -> str:
+    if not queued and not running:
+        return "Nothing was queued or running."
+    parts = []
+    if running:
+        parts.append(f"{running} running generation"
+                     f"{'s' if running != 1 else ''} stopping now")
+    if queued:
+        parts.append(f"{queued} queued generation"
+                     f"{'s' if queued != 1 else ''} cancelled")
+    return " and ".join(parts) + ". Any credits held have been released."
+
+
 @router.get("/timetable/{timetable_id}/attempts")
 async def attempts(timetable_id: str, user: CurrentUser) -> list[dict]:
     """Every attempt made for a timetable, so retries are visible."""

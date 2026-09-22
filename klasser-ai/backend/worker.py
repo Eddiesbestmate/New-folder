@@ -163,22 +163,79 @@ HANDLERS = {
 
 
 async def with_heartbeat(job: queue.Job) -> None:
-    """Run a job while keeping its heartbeat fresh, so it is not reaped."""
+    """
+    Run a job while keeping its heartbeat fresh, so it is not reaped.
+
+    A second watcher polls for cancellation. It runs far more often than the
+    heartbeat because it is what a person sees when they press Stop: at the
+    heartbeat's interval the button would appear to do nothing for half a
+    minute.
+    """
     interval = await settings_service.get_int("queue_heartbeat_seconds", 30)
+    poll = await settings_service.get_int("queue_cancel_poll_seconds", 3)
+
+    handler = HANDLERS.get(job.job_type)
+    if handler is None:
+        raise ValueError(f"No handler for job type {job.job_type!r}")
+
+    running = asyncio.create_task(handler(job))
 
     async def beat() -> None:
         while True:
             await asyncio.sleep(interval)
             await queue.heartbeat(job.id)
 
+    async def watch() -> None:
+        while True:
+            await asyncio.sleep(poll)
+            if await queue.is_cancelled(job.id):
+                running.cancel()
+                return
+
     beating = asyncio.create_task(beat())
+    watching = asyncio.create_task(watch())
     try:
-        handler = HANDLERS.get(job.job_type)
-        if handler is None:
-            raise ValueError(f"No handler for job type {job.job_type!r}")
-        await handler(job)
+        await running
+    except asyncio.CancelledError:
+        # Only the watcher finishing means *we* cancelled this. Anything else
+        # is the process shutting down, which must keep propagating.
+        if watching.done():
+            raise queue.JobCancelled(job.id) from None
+        raise
     finally:
         beating.cancel()
+        watching.cancel()
+
+
+async def release_stopped(job: queue.Job) -> None:
+    """
+    Undo a generation someone stopped part-way.
+
+    Nothing is charged for a run the school never received a timetable from,
+    so the hold goes back first - before the rows are tidied, because a
+    failure to tidy must not be what strands a school's credits.
+    """
+    if not job.timetable_id:
+        return
+
+    try:
+        await billing.release(job.school_id, job.timetable_id,
+                              "stopped by the school")
+    except Exception:  # noqa: BLE001
+        log.exception("Could not release the hold for %s", job.timetable_id)
+
+    await db.execute("""
+        UPDATE timetables SET status = 'cancelled', completed_at = now()
+        WHERE id = $1
+    """, job.timetable_id)
+    # 'cancelled' rather than 'failed': the progress screen reads this to
+    # decide between a red failure and a plain "you stopped this", and nothing
+    # else in the codebase branches on an attempt being exactly 'failed'.
+    await db.execute("""
+        UPDATE generation_attempts
+        SET status = 'cancelled', failure_reason = $2, completed_at = now()
+        WHERE timetable_id = $1 AND status = 'in_progress'
+    """, job.timetable_id, "Stopped by the school.")
 
 
 async def process(job: queue.Job) -> None:
@@ -187,6 +244,11 @@ async def process(job: queue.Job) -> None:
     try:
         await with_heartbeat(job)
         await queue.complete(job.id)
+    except queue.JobCancelled:
+        # cancel_school already wrote 'cancelled', so this must not fall
+        # through to queue.fail() - that would overwrite it and requeue.
+        log.info("Job %s was stopped; releasing its hold", job.id)
+        await release_stopped(job)
     except Exception as exc:  # noqa: BLE001
         log.exception("Job %s failed", job.id)
         # A generation that failed on its own terms has already exhausted the

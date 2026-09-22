@@ -1,4 +1,4 @@
-/* Klasser AI - API access.
+/* Klasser - API access.
  *
  * Every call to the backend goes through apiCall(), which attaches the current
  * Supabase access token and turns error responses into a thrown ApiError with a

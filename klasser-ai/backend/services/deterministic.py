@@ -27,11 +27,17 @@ class CheckResult:
     warnings: list[str] = field(default_factory=list)
 
     def fail(self, message: str) -> None:
+        # Deduplicated because these are read by a person, not a machine.
+        # subject_settings holds a row per subject *and year level*, so one
+        # missing room type produced "'Chemistry' needs a lab" five times over
+        # - thirty-six lines for what was really two problems.
         self.passed = False
-        self.failures.append(message)
+        if message not in self.failures:
+            self.failures.append(message)
 
     def warn(self, message: str) -> None:
-        self.warnings.append(message)
+        if message not in self.warnings:
+            self.warnings.append(message)
 
     def merge(self, other: "CheckResult") -> None:
         if not other.passed:
@@ -161,6 +167,99 @@ async def pre_validate(school_id: str, layout_id: str) -> CheckResult:
         result.fail(
             f"{row['full_name']} ({row['year_group']}) needs {row['needed']} periods "
             f"a cycle for their subjects, but the cycle has only {slots_per_cycle}.")
+
+    result.merge(await _capacity_check(school_id, slots_per_cycle))
+    return result
+
+
+async def _capacity_check(school_id: str, slots_per_cycle: int) -> CheckResult:
+    """
+    Will the rooms and staff stretch to what the enrolments demand?
+
+    Layer 2 costs about 1.5 million tokens before layer 3 ever discovers a
+    shortage, so a school short of labs paid full price to be told so. Every
+    number here comes from enrolments and settings, which are free to read.
+
+    Shortfalls are judged against the *fewest* classes the school could
+    possibly form - hard_max_size per class, not the soft target. A failure
+    here is therefore arithmetic, not an estimate: if the optimistic count
+    still does not fit, no allocation exists. Anything tighter is a warning,
+    because the allocator may yet find a way and refusing to try would be
+    worse than letting it.
+    """
+    result = ok()
+    if not slots_per_cycle:
+        return result
+
+    demand = await db.fetch("""
+        SELECT s.year_group, sub.subject,
+               coalesce(c.name, '(no campus)') AS campus,
+               coalesce(ss.default_room_type, 'classroom') AS room_type,
+               coalesce(ss.hard_max_size, 30) AS hard_max,
+               coalesce(ss.min_periods_per_cycle, 4) AS periods,
+               count(*) AS heads
+        FROM student_subjects sub
+        JOIN students s ON s.id = sub.student_id
+        LEFT JOIN campuses c ON c.id = s.campus_id
+        LEFT JOIN subject_settings ss
+               ON ss.school_id = s.school_id AND ss.subject = sub.subject
+              AND ss.year_level IS NOT DISTINCT FROM s.year_group
+        WHERE s.school_id = $1
+        GROUP BY 1, 2, 3, 4, 5, 6
+    """, school_id)
+    if not demand:
+        return result
+
+    rooms = await db.fetch("""
+        SELECT coalesce(c.name, '(no campus)') AS campus,
+               coalesce(r.room_type, 'classroom') AS room_type,
+               count(*) AS n
+        FROM rooms r LEFT JOIN campuses c ON c.id = r.campus_id
+        WHERE r.school_id = $1 GROUP BY 1, 2
+    """, school_id)
+    supply = {(r["campus"], r["room_type"]): r["n"] for r in rooms}
+
+    needed: dict[tuple[str, str], int] = {}
+    total_class_periods = 0
+    for row in demand:
+        fewest = -(-row["heads"] // row["hard_max"])      # ceil
+        periods = fewest * row["periods"]
+        total_class_periods += periods
+        key = (row["campus"], row["room_type"])
+        needed[key] = needed.get(key, 0) + periods
+
+    for (campus, room_type), want in sorted(needed.items()):
+        have = supply.get((campus, room_type), 0)
+        capacity = have * slots_per_cycle
+        where = "" if campus == "(no campus)" else f" at {campus}"
+        if have == 0:
+            result.fail(
+                f"Classes need a {room_type}{where} but there are none there.")
+        elif want > capacity:
+            result.fail(
+                f"{room_type.title()}s{where} can host {capacity} class-periods "
+                f"a cycle ({have} rooms x {slots_per_cycle} periods), but the "
+                f"subjects needing one add up to {want}. Add "
+                f"{-(-(want - capacity) // slots_per_cycle)} more, or have "
+                "those subjects meet less often.")
+        elif want > capacity * 0.9:
+            result.warn(
+                f"{room_type.title()}s{where} are {want / capacity:.0%} booked "
+                "before timetabling starts. There may be no room to move.")
+
+    staff = await db.fetchval("""
+        SELECT coalesce(sum(coalesce(max_blocks, 5)), 0) FROM teachers
+        WHERE school_id = $1
+    """, school_id)
+    if staff and total_class_periods > staff:
+        result.fail(
+            f"Teaching {total_class_periods} class-periods a cycle needs more "
+            f"staff time than the school has: {staff} across every teacher. "
+            "Add teachers, or raise their maximum blocks.")
+    elif staff and total_class_periods > staff * 0.9:
+        result.warn(
+            f"Teachers are committed to {total_class_periods / staff:.0%} of "
+            "their maximum blocks before duties are assigned.")
 
     return result
 

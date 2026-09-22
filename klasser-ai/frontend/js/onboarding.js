@@ -1,4 +1,4 @@
-/* Klasser AI - onboarding wizard.
+/* Klasser - onboarding wizard.
  *
  * Progress is always read from the backend, which derives each step from the
  * actual data. Nothing here decides whether a step is complete.

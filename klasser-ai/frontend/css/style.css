@@ -109,6 +109,23 @@ a  { color: var(--purple-dark); }
 .btn:disabled:hover { background: #fff; color: var(--ink); border-color: #D8D8E6; box-shadow: none; }
 .btn-block { width: 100%; }
 
+/* Inverts the house style - amber at rest, purple on hover - for the one
+ * button on a page that is unambiguously the thing you came to press. Declared
+ * after .btn:hover so it wins, but before .btn:disabled:hover so a disabled
+ * button still reads as disabled. */
+.btn-amber {
+  background: var(--amber);
+  color: var(--ink);
+  border-color: var(--amber);
+  box-shadow: 0 1px 2px rgba(245,166,35,.35);
+}
+.btn-amber:hover {
+  background: var(--purple-dark);
+  color: #FFFFFF;
+  border-color: var(--purple-dark);
+  box-shadow: 0 2px 5px rgba(79,70,229,.35);
+}
+
 /* --- Forms ---------------------------------------------------------------- */
 
 .field { margin-bottom: 14px; }
@@ -432,4 +449,113 @@ dialog::backdrop { background: rgba(26,26,46,.38); }
   .hero h1 { font-size: 30px; }
   .field-row { flex-direction: column; gap: 0; }
   .nav, .hero, .section { padding-left: 18px; padding-right: 18px; }
+}
+
+/* --- Pills / status tags (BRAND.md "Tags / badges") ------------------------
+ * billing.js and transport.js already rendered .pill spans against no rule at
+ * all, so they showed as bare text. Defined here once for every caller. */
+
+.pill {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 999px; border: 1px solid var(--border-strong);
+  background: var(--surface-1); color: var(--slate);
+  font-size: 10px; font-weight: 600; letter-spacing: .3px;
+  text-transform: uppercase; white-space: nowrap;
+}
+.pill-success { background: var(--bg-success); color: var(--text-success);
+                border-color: var(--border-success); }
+.pill-danger  { background: var(--bg-danger);  color: var(--text-danger);
+                border-color: var(--border-danger); }
+.pill-warning { background: var(--bg-warning); color: var(--text-warning);
+                border-color: var(--border-warning); }
+.pill-accent  { background: var(--bg-accent);  color: var(--text-accent);
+                border-color: var(--purple-border); }
+
+/* --- Sidebar shell (BRAND.md "Sidebar") ------------------------------------
+ * Injected by js/nav.js in place of the old .topbar strip, so navigation is
+ * reachable from every signed-in page rather than only from the dashboard. */
+
+.shell { display: flex; min-height: 100vh; align-items: stretch; }
+
+.sidebar {
+  flex: 0 0 216px;
+  background: #5457E0;
+  color: rgba(255,255,255,.82);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; align-self: flex-start;
+  height: 100vh;
+}
+.sidebar-head { padding: 18px 18px 14px; }
+.sidebar-nav  { flex: 1 1 auto; overflow-y: auto; padding: 4px 10px 12px; }
+.sidebar-foot {
+  padding: 12px 10px 14px;
+  border-top: 1px solid rgba(255,255,255,.16);
+}
+
+.sidebar-group {
+  padding: 14px 8px 5px;
+  font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
+  text-transform: uppercase; color: rgba(255,255,255,.52);
+}
+.sidebar a.sidebar-link {
+  display: block; padding: 7px 10px; margin-bottom: 1px;
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 500; text-decoration: none;
+  color: rgba(255,255,255,.82);
+  transition: background .15s, color .15s;
+}
+.sidebar a.sidebar-link:hover {
+  background: rgba(255,255,255,.14); color: #fff;
+}
+.sidebar a.sidebar-link.active {
+  background: var(--amber); color: var(--ink); font-weight: 600;
+}
+.sidebar .who {
+  display: block; padding: 2px 10px 9px;
+  font-size: 11px; line-height: 1.4; color: rgba(255,255,255,.72);
+}
+.sidebar .btn { width: 100%; }
+
+.sidebar-main { flex: 1 1 auto; min-width: 0; }
+
+/* Under 900px the column would crush the content, so it lies down into a
+ * scrollable strip along the top instead of collapsing behind a toggle. */
+@media (max-width: 900px) {
+  .shell { display: block; }
+  .sidebar {
+    flex: none; width: auto; height: auto; position: static;
+    flex-direction: row; align-items: center; gap: 8px;
+    overflow-x: auto; padding: 8px 12px;
+  }
+  .sidebar-head { padding: 0 10px 0 4px; }
+  .sidebar-nav  {
+    display: flex; gap: 4px; padding: 0; overflow-x: auto; overflow-y: hidden;
+    /* overflow:auto resets a flex item automatic min-width to 0, so without
+     * an explicit flex-basis this collapsed to a sliver while .sidebar-foot -
+     * which has no overflow set, so keeps its natural content width - took
+     * all the room. Only a few letters of the active link were visible. */
+    flex: 1 1 160px; min-width: 0;
+  }
+  .sidebar-foot {
+    display: flex; align-items: center; gap: 8px;
+    border-top: none; border-left: 1px solid rgba(255,255,255,.16);
+    padding: 0 0 0 10px;
+    /* Never shrinks: Log out must stay reachable. Giving .sidebar-nav the
+     * flex-basis above and leaving this alone once caused this row to be
+     * compressed below its own content width with no scroll affordance of
+     * its own, clipping the Log out button off the edge of the viewport
+     * entirely rather than just cramming it. */
+    flex: 0 0 auto;
+  }
+  .sidebar-group { display: none; }
+  .sidebar a.sidebar-link { white-space: nowrap; margin: 0; }
+  .sidebar .who { padding: 0 6px; white-space: nowrap; }
+  .sidebar .btn { width: auto; }
+}
+
+@media (max-width: 480px) {
+  /* Redundant this narrow - every page already states "signed in as ..."
+   * in its own body content - and dropping it is what keeps Log out inside
+   * the viewport without the footer needing to scroll. */
+  .sidebar .who { display: none; }
 }

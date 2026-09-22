@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Class rules - Klasser</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    textarea {
+      width: 100%; min-height: 150px; resize: vertical;
+      font: inherit; font-size: 13px; line-height: 1.5;
+      padding: 10px 12px;
+      border: 1px solid var(--border-strong); border-radius: var(--radius);
+      background: #fff; color: var(--ink);
+    }
+    textarea:focus { outline: 2px solid var(--purple); outline-offset: -1px; }
+    .inferred {
+      border-bottom: 1px dotted var(--amber-dark);
+      background: var(--amber-light);
+    }
+    .group-row td { vertical-align: top; }
+    .group-row input, .group-row select {
+      width: 100%; font: inherit; font-size: 12px; padding: 4px 6px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Class rules</span>
+    <h1>How your classes are formed</h1>
+    <p class="muted">
+      Describe it in your own words. We read it back as structured rules so you
+      can correct anything we misunderstood before it shapes a timetable.
+    </p>
+
+    <!-- Write ------------------------------------------------------------- -->
+    <div class="card" style="margin-bottom:16px">
+      <h3>Write a new rule set</h3>
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" maxlength="200" placeholder="e.g. Senior school 2026">
+      </div>
+      <div class="field">
+        <label for="raw">What should happen</label>
+        <textarea id="raw" maxlength="20000"
+          placeholder="Year 11 Maths runs as three parallel classes. Keep the accelerated group together. Chemistry needs a lab. Year 7 PE should be split by campus."></textarea>
+        <div class="hint">
+          Plain English. Mention subjects by the names you use on the data
+          pages, or we will not be able to match them.
+        </div>
+      </div>
+      <button class="btn btn-amber" id="submit" type="button">
+        Interpret this
+      </button>
+      <span class="small muted" id="submit-note" style="margin-left:10px"></span>
+    </div>
+
+    <!-- Interpretation ---------------------------------------------------- -->
+    <div class="card" id="review" hidden style="margin-bottom:16px;
+         border-left:3px solid var(--purple)">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
+        <div>
+          <h3 style="margin-bottom:4px">What we understood</h3>
+          <p class="muted small" id="summary" style="margin:0"></p>
+        </div>
+        <span class="pill" id="state"></span>
+      </div>
+
+      <div id="unclear-box" hidden class="alert alert-warning small"
+           style="margin-top:12px">
+        <strong>Not used:</strong> <span id="unclear"></span>
+      </div>
+
+      <p class="muted small" style="margin:12px 0 4px">
+        Anything <span class="inferred">shaded</span> we filled in ourselves
+        because you did not say. Correct it and it stops being a guess.
+      </p>
+
+      <div style="overflow-x:auto">
+        <table class="table" style="margin-top:6px">
+          <thead>
+            <tr>
+              <th>Subject</th><th>Year</th><th>Classes</th><th>Max size</th>
+              <th>Room</th><th>Double</th><th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="groups"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn" id="save" type="button">Save corrections</button>
+        <button class="btn btn-amber" id="confirm" type="button">
+          Confirm and use these
+        </button>
+        <button class="btn" id="discard" type="button">Delete</button>
+      </div>
+    </div>
+
+    <!-- History ----------------------------------------------------------- -->
+    <div class="card">
+      <h3>Previous rule sets</h3>
+      <div style="overflow-x:auto">
+        <table class="table" style="margin-top:8px">
+          <thead>
+            <tr><th>Name</th><th>Status</th><th>Rules</th><th>Written</th><th></th></tr>
+          </thead>
+          <tbody id="history"></tbody>
+        </table>
+      </div>
+      <p class="muted small" id="history-empty" hidden style="margin:12px 0 0">
+        Nothing written yet. A timetable can still be generated without this -
+        classes are then formed from enrolments alone.
+      </p>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <a class="btn" href="dashboard.html">Back to dashboard</a>
+      <a class="btn btn-primary" href="generate.html">Generate a timetable</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/requirements.js"></script>
+
+</body>
+</html>

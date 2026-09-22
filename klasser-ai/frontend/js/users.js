@@ -1,4 +1,4 @@
-/* Klasser AI - school users and invites. */
+/* Klasser - school users and invites. */
 
 const alertBox = document.getElementById('alert');
 const inviteAlert = document.getElementById('invite-alert');

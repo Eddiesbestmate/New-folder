@@ -1,4 +1,4 @@
-/* Klasser AI - transport fleet, routes and the solved schedule. */
+/* Klasser - transport fleet, routes and the solved schedule. */
 
 const alertBox = document.getElementById('alert');
 const busDialog = document.getElementById('bus-dialog');
@@ -309,6 +309,52 @@ async function reload() {
   renderRoutes();
 }
 
+/* --- Crossing campuses mid-day --------------------------------------------- */
+
+async function loadCrossCampus(me) {
+  const box = document.getElementById('allow-cross');
+  const save = document.getElementById('save-cross');
+  const prefs = await apiCall('GET', '/transport/preferences');
+
+  box.checked = prefs.allow_cross_campus_travel;
+
+  // Say what the rule actually means for this school's own travel time,
+  // rather than describing it in the abstract.
+  const minutes = prefs.shortest_route_minutes;
+  document.getElementById('cross-detail').textContent = minutes
+    ? `A class at the other campus is only scheduled when the break before it `
+      + `is long enough to travel - at least ${minutes} minutes here. `
+      + `Left off, every student stays at one campus for the whole day.`
+    : 'Add a route between your campuses first, so we know how long the trip '
+      + 'takes.';
+
+  const readOnly = me.role !== 'owner';
+  box.disabled = readOnly;
+  save.hidden = readOnly;
+  if (readOnly) {
+    document.getElementById('cross-note').textContent =
+      'Only the owner can change this.';
+  }
+}
+
+document.getElementById('save-cross').addEventListener('click', async () => {
+  const save = document.getElementById('save-cross');
+  const note = document.getElementById('cross-note');
+  save.disabled = true;
+  note.textContent = 'Saving...';
+  try {
+    const result = await apiCall('PUT', '/transport/preferences', {
+      allow_cross_campus_travel: document.getElementById('allow-cross').checked,
+    });
+    note.textContent = result.message;
+  } catch (err) {
+    note.textContent = '';
+    showAlert(alertBox, err.message);
+  } finally {
+    save.disabled = false;
+  }
+});
+
 (async () => {
   const me = await requireLogin();
   if (!me) return;
@@ -327,6 +373,7 @@ async function reload() {
     document.getElementById('not-applicable').hidden = false;
   } else {
     document.getElementById('main').hidden = false;
+    await loadCrossCampus(me);
     await reload();
   }
 

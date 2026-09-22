@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Transport - Klasser AI</title>
+  <title>Transport - Klasser</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <style>
@@ -47,6 +47,23 @@
 
     <div id="main" hidden>
       <div id="readiness" class="small" style="margin-bottom:16px"></div>
+
+      <div class="card" style="margin-bottom:16px;
+           border-left:3px solid var(--purple)">
+        <h3 style="margin-top:0">Moving between campuses</h3>
+        <label style="display:flex;gap:10px;align-items:start;cursor:pointer">
+          <input type="checkbox" id="allow-cross" style="margin-top:3px">
+          <span>
+            <strong>Let students change campus during the day</strong>
+            <span class="muted small" style="display:block;margin-top:3px"
+                  id="cross-detail"></span>
+          </span>
+        </label>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+          <button class="btn" id="save-cross" type="button">Save</button>
+          <span class="small muted" id="cross-note"></span>
+        </div>
+      </div>
 
       <div class="feature-grid" id="stats" style="margin-bottom:18px"></div>
 
@@ -169,6 +186,7 @@
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
 <script src="js/transport.js"></script>
 
 </body>

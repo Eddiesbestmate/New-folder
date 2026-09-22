@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Queue - Klasser</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" style="text-decoration:none">
+    <span class="logo logo-light">Klass<span class="er">er</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="who" id="who"></span>
+    <button class="btn" id="logout" type="button">Log out</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="alert" hidden></div>
+  <div id="loading" class="muted">Loading...</div>
+
+  <div id="content" hidden>
+    <span class="eyebrow">Queue</span>
+    <h1>Generation queue</h1>
+    <p class="muted">
+      Everything this school has run recently. The page keeps itself up to
+      date - there is no need to refresh it.
+    </p>
+
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;
+                  align-items:start;gap:12px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin-bottom:4px">Right now</h3>
+          <p class="muted small" id="summary" style="margin:0"></p>
+        </div>
+        <div style="display:flex;gap:8px;flex:0 0 auto;align-items:center">
+          <span class="small muted" id="pulse" aria-live="polite"></span>
+          <button class="btn" id="stop" type="button" hidden>
+            Stop all generations
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Recent runs</h3>
+      <div style="overflow-x:auto">
+        <table class="table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Timetable</th><th>Status</th><th>Attempts</th>
+              <th>Started</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="jobs"></tbody>
+        </table>
+      </div>
+      <p class="muted small" id="empty" hidden style="margin:12px 0 0">
+        Nothing has been generated yet.
+      </p>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <a class="btn" href="dashboard.html">Back to dashboard</a>
+      <a class="btn" href="timetables.html">Timetables</a>
+      <a class="btn btn-primary" href="generate.html">Generate a timetable</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/queue.js"></script>
+
+</body>
+</html>

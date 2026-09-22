@@ -1,4 +1,4 @@
-/* Klasser AI - timetable output.
+/* Klasser - timetable output.
  *
  * Four grid views (class, teacher, room, student) plus transport and duties.
  * The server groups and filters; this page only lays out what it is given, so
@@ -203,82 +203,6 @@ document.getElementById('publish').addEventListener('click', async () => {
 
 /* --- Start ----------------------------------------------------------------- */
 
-/* --- Export ---------------------------------------------------------------- */
-
-let exportTemplates = [];
-
-document.getElementById('export').addEventListener('click', async () => {
-  const panel = document.getElementById('export-panel');
-  panel.hidden = !panel.hidden;
-  if (panel.hidden) return;
-
-  try {
-    exportTemplates = await apiCall('GET', '/export/templates');
-    document.getElementById('export-empty').hidden = exportTemplates.length > 0;
-    document.getElementById('export-body').hidden = !exportTemplates.length;
-
-    if (exportTemplates.length) {
-      document.getElementById('export-template').innerHTML = exportTemplates
-        .map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`)
-        .join('');
-      await exportPreview();
-    }
-    panel.scrollIntoView({ behavior: 'smooth' });
-  } catch (err) {
-    showAlert(alertBox, err.message);
-  }
-});
-
-document.getElementById('export-close').addEventListener('click', () => {
-  document.getElementById('export-panel').hidden = true;
-});
-
-document.getElementById('export-template').addEventListener('change', exportPreview);
-
-async function exportPreview() {
-  const templateId = document.getElementById('export-template').value;
-  if (!templateId) return;
-  try {
-    const data = await apiCall(
-      'GET', `/export/preview/${versionId}/${templateId}`, null, { rows: 5 });
-    document.getElementById('export-meta').textContent =
-      `${data.total_rows} rows, showing ${data.showing}.`;
-    document.getElementById('export-preview').textContent = data.lines.join('\n');
-    document.getElementById('export-download').disabled = data.total_rows === 0;
-  } catch (err) {
-    document.getElementById('export-preview').textContent = err.message;
-    document.getElementById('export-download').disabled = true;
-  }
-}
-
-document.getElementById('export-download').addEventListener('click', async () => {
-  const templateId = document.getElementById('export-template').value;
-  if (!templateId) return;
-
-  // Fetched with the auth header rather than a plain link: a link cannot carry
-  // the token, and putting it in the query string would log it.
-  try {
-    const token = await accessToken();
-    const response = await fetch(
-      `${KLASSER.API_BASE}/export/download/${versionId}/${templateId}`,
-      { headers: { Authorization: `Bearer ${token}` } });
-    if (!response.ok) throw new Error(`Export failed (${response.status})`);
-
-    const disposition = response.headers.get('Content-Disposition') || '';
-    const match = disposition.match(/filename="([^"]+)"/);
-    const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = match ? match[1] : 'timetable.csv';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    showAlert(alertBox, err.message);
-  }
-});
-
 (async () => {
   const me = await requireLogin();
   if (!me) return;
@@ -313,11 +237,10 @@ document.getElementById('export-download').addEventListener('click', async () =>
       </div>`).join('');
 
   // A sample belongs to the demonstration school. The server refuses to
-  // publish, edit or export it, so the page must not offer any of them - an
-  // enabled button that always errors is worse than no button.
+  // publish or edit it, so the page must not offer either - an enabled
+  // button that always errors is worse than no button.
   if (summary.is_sample) {
     document.getElementById('sample-banner').hidden = false;
-    document.getElementById('export').hidden = true;
   } else if (summary.status === 'draft' && ['owner', 'dev'].includes(me.role)) {
     document.getElementById('publish').hidden = false;
     // Only a draft can be edited - a published timetable is what the school is

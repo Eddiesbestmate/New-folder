@@ -1,4 +1,4 @@
-/* Klasser AI - dev portal support queue. */
+/* Klasser - dev portal support queue. */
 
 const alertBox = document.getElementById('alert');
 let current = null;

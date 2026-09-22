@@ -1,4 +1,4 @@
-/* Klasser AI - billing: balance, packages, card, history and invoices. */
+/* Klasser - billing: balance, packages, card, history and invoices. */
 
 const alertBox = document.getElementById('alert');
 const cardDialog = document.getElementById('card-dialog');

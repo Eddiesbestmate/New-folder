@@ -214,6 +214,53 @@ async def cancel(job_id: str, school_id: str) -> bool:
     return cancelled is not None
 
 
+class JobCancelled(Exception):
+    """
+    Raised inside a worker when its job was cancelled from the API.
+
+    Distinct from a failure: nothing went wrong, so the job is not retried and
+    the school is not billed.
+    """
+
+
+async def is_cancelled(job_id: str) -> bool:
+    """Whether a job has been cancelled out from under its worker."""
+    return bool(await db.fetchval(
+        "SELECT status = 'cancelled' FROM job_queue WHERE id = $1", job_id))
+
+
+async def cancel_school(school_id: str) -> list[dict]:
+    """
+    Stop everything one school has in flight - queued and running alike.
+
+    A queued job simply never starts. A running one is marked here and its
+    worker notices within a few seconds and abandons the work; the worker, not
+    this function, is what releases the credits it had reserved.
+
+    The row's previous status comes back with it so the caller can tell the
+    two apart, which decides who is responsible for the refund.
+    """
+    rows = await db.fetch("""
+        WITH victims AS (
+            SELECT id, status AS was
+            FROM job_queue
+            WHERE school_id = $1 AND status IN ('queued', 'running')
+            FOR UPDATE
+        )
+        UPDATE job_queue q
+        SET status = 'cancelled', completed_at = now()
+        FROM victims v
+        WHERE q.id = v.id
+        RETURNING q.id, q.timetable_id, v.was
+    """, school_id)
+    return [
+        {"id": str(r["id"]),
+         "timetable_id": str(r["timetable_id"]) if r["timetable_id"] else None,
+         "was": r["was"]}
+        for r in rows
+    ]
+
+
 # --- Recovery ----------------------------------------------------------------
 
 async def reap_stale() -> int:
@@ -278,7 +325,8 @@ async def recent(school_id: Optional[str] = None, limit: int = 50) -> list[dict]
     rows = await db.fetch("""
         SELECT j.id, j.job_type, j.status, j.priority, j.attempts,
                j.max_attempts, j.last_error, j.claimed_by, j.created_at,
-               j.completed_at, t.name AS timetable_name, s.name AS school_name
+               j.completed_at, j.timetable_id,
+               t.name AS timetable_name, s.name AS school_name
         FROM job_queue j
         LEFT JOIN timetables t ON t.id = j.timetable_id
         JOIN schools s ON s.id = j.school_id
@@ -286,7 +334,13 @@ async def recent(school_id: Optional[str] = None, limit: int = 50) -> list[dict]
         ORDER BY j.created_at DESC
         LIMIT $2
     """, school_id, limit)
-    return [dict(r) | {"id": str(r["id"])} for r in rows]
+    return [
+        dict(r) | {
+            "id": str(r["id"]),
+            "timetable_id": str(r["timetable_id"]) if r["timetable_id"] else None,
+        }
+        for r in rows
+    ]
 
 
 # --- Waiting for work ----------------------------------------------------------

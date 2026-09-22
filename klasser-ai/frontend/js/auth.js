@@ -1,4 +1,4 @@
-/* Klasser AI - authentication.
+/* Klasser - authentication.
  *
  * Password login for now. Google and Microsoft are added by calling
  * signInWithOAuth() below once the providers are enabled in the Supabase
@@ -101,6 +101,19 @@ function showAlert(el, message, kind = 'error') {
   el.className = `alert alert-${kind}`;
   el.textContent = message;
   el.hidden = false;
+
+  // The alert box sits at the top of every page, which is off-screen the
+  // moment a form is long enough to scroll - so a failed save looked like a
+  // button that did nothing. Bring it into view rather than trusting the
+  // reader to go looking for it.
+  if (kind === 'error' || kind === 'warning') {
+    el.setAttribute('role', 'alert');
+    if (typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  } else {
+    el.setAttribute('role', 'status');
+  }
 }
 
 function hideAlert(el) {

@@ -1,4 +1,4 @@
-/* Klasser AI - raise and track support tickets. */
+/* Klasser - raise and track support tickets. */
 
 const alertBox = document.getElementById('alert');
 const formAlert = document.getElementById('form-alert');

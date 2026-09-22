@@ -3,14 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Generating - Klasser AI</title>
+  <title>Generating - Klasser</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <style>
     .bar { height: 8px; background: var(--surface-1); border-radius: 999px;
-           overflow: hidden; }
+           overflow: hidden; position: relative; }
     .bar > div { height: 100%; background: var(--purple);
                  transition: width .4s ease; }
+
+    /* Stages can sit at the same percentage for minutes at a time while the
+     * AI works through a chunk. Without something moving, a run that is
+     * perfectly healthy reads as frozen. */
+    .bar.working::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent,
+                  rgba(255,255,255,.65), transparent);
+      animation: sweep 1.6s linear infinite;
+    }
+    @keyframes sweep {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(100%); }
+    }
+    .dot.active { animation: pulse 1.3s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+    .spinner {
+      display: none; width: 12px; height: 12px; flex: 0 0 auto;
+      border: 2px solid var(--purple-border);
+      border-top-color: var(--purple); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .working-now .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .elapsed { font-variant-numeric: tabular-nums; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bar.working::after, .dot.active, .spinner { animation: none; }
+      .spinner { display: none; }
+    }
     .stage-list { list-style: none; padding: 0; margin: 16px 0 0; }
     .stage-list li { display: flex; align-items: center; gap: 10px;
                      padding: 7px 0; font-size: 13px;
@@ -21,7 +53,7 @@
     .dot.active  { color: var(--amber-dark); }
     .dot.waiting { color: var(--slate-light); }
     .dot.failed  { color: var(--text-danger); }
-    .log { max-height: 280px; overflow-y: auto; font-size: 12px;
+    .log { max-height: 460px; overflow-y: auto; font-size: 12px;
            border: 1px solid var(--border); border-radius: var(--radius-md);
            padding: 10px; background: var(--surface-2); }
     .log div { padding: 3px 0; border-bottom: 1px solid var(--surface-1); }
@@ -53,9 +85,15 @@
     <p class="muted" id="subtitle"></p>
 
     <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <strong id="stage-label">Starting...</strong>
-        <span class="muted small" id="pct">0%</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <span class="spinner" aria-hidden="true"></span>
+          <strong id="stage-label">Starting...</strong>
+        </div>
+        <span class="muted small">
+          <span class="elapsed" id="elapsed"></span>
+          <span id="pct">0%</span>
+        </span>
       </div>
       <div class="bar" style="margin-top:10px"><div id="bar-fill" style="width:0"></div></div>
       <div class="muted small" id="chunk" style="margin-top:8px"></div>
@@ -75,8 +113,10 @@
 
     <div id="result" hidden></div>
 
-    <div style="display:flex;gap:10px;margin-top:16px">
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
       <a class="btn" href="dashboard.html">Back to dashboard</a>
+      <a class="btn" href="queue.html">Queue</a>
+      <button class="btn" id="stop" type="button" hidden>Stop generating</button>
       <a class="btn btn-primary" id="view-output" href="#" hidden>View the timetable</a>
       <a class="btn" id="retry" href="generate.html" hidden>Try again</a>
     </div>
@@ -87,6 +127,7 @@
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
 <script src="js/progress.js"></script>
 
 </body>

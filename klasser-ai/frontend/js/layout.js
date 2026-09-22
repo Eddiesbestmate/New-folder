@@ -1,4 +1,4 @@
-/* Klasser AI - timetable layout builder.
+/* Klasser - timetable layout builder.
  *
  * Edits an in-memory model of days and periods, then sends the whole layout in
  * one PUT. The backend replaces the period set atomically, so a partial save

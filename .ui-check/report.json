@@ -1,0 +1,169 @@
+{
+  "login": {
+    "url": "http://127.0.0.1:5500/dashboard.html"
+  },
+  "sidebar": {
+    "exists": true,
+    "linkCount": 16,
+    "links": [
+      "Dashboard",
+      "Timetables",
+      "Queue",
+      "School data",
+      "Import data",
+      "Class rules",
+      "Timetable layout",
+      "Transport",
+      "Setup",
+      "Users",
+      "Billing",
+      "Notifications",
+      "Export templates",
+      "Dev portal",
+      "Support queue",
+      "Help"
+    ]
+  },
+  "dashboard": {
+    "path": "/dashboard.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "queue": {
+    "path": "/queue.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "timetables": {
+    "path": "/timetables.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "requirements": {
+    "path": "/requirements.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "transport": {
+    "path": "/transport.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "data": {
+    "path": "/data.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "layout": {
+    "path": "/layout.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "onboarding": {
+    "path": "/onboarding.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "billing": {
+    "path": "/billing.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "users": {
+    "path": "/users.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "notifications": {
+    "path": "/notifications.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "import": {
+    "path": "/import.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "export-templates": {
+    "path": "/export-templates.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "support": {
+    "path": "/support.html",
+    "httpStatus": 200,
+    "horizontalScroll": false,
+    "visibleAlert": null,
+    "stuckLoading": false,
+    "sidebarActiveCount": 1,
+    "brokenImages": [],
+    "suspiciousText": []
+  },
+  "consoleErrors": {},
+  "mobileDashboardOverflow": true
+}
